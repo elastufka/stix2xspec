@@ -2,7 +2,11 @@ import pandas as pd
 import numpy as np
 import os
 from datetime import datetime as dt
-#from .read_elut import *
+from datetime import timedelta as td
+from importlib import resources
+from astropy.table import Table
+from astropy.io import fits
+from astropy.time import Time
 from .spectrogram_utils import *
 from .livetime import *
 from astropy.table import Table
@@ -426,9 +430,9 @@ class Spectrogram:
         self.counts = self.counts[:,chan_idx]
         self.error = self.error[chan_idx,:]
     
-    def spectrum_to_fits(self, fitsfilename, srm_file = "/Users/wheatley/Documents/Solar/STIX/spectral_fitting/stx_srm_full.fits"):
+    def spectrum_to_fits(self, fitsfilename, srm_file = "stx_srm_full.fits"):
         
-        srm = fits.open(srm_file) # Need to match the number of channels in here!
+        srm = fits.open(resources.path('stix2xspec/data',srm_file)) # Need to match the number of channels in here!
         self.select_energy_channels(srm[2].data.E_MIN + self.energy_shift) #have to add energy shift if necessary!
         #should also trim the response matrix if the number of channels in the spectrum are fewer!
         srm_nenergies = srm[1].data.N_CHAN[0]
