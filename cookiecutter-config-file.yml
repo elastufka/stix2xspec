@@ -1,0 +1,13 @@
+# This file contains values from Cookiecutter
+
+default_context:
+  project_name: "stix2xspec"
+  project_description: "Convert STIX science data (L1A, L1, or L4 spectrograms or pixel data) to a format compatible with XSPEC"
+  organization: "stix2xspec"
+  license: "GNU GPL v3.0"
+  minimal_python_version: 3.7
+  github_name: "stix2xspec"
+  email: "elastufka@gmail.com"
+  version: "0.1.0"
+  line_length: "88"
+  create_example_template: "cli"
