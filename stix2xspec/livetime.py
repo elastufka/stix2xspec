@@ -6,7 +6,6 @@ import warnings
 from datetime import datetime as dt
 from datetime import timedelta as td
 from .triggergram import Triggergram
-from ml_utils import print_arr_stats
 
 def pileup_corr_parameter():
     subc = construct_subcollimator()
@@ -54,21 +53,19 @@ def spectrogram_livetime(spectrogram, level = 4):
     nenergies = spectrogram.n_energies
     det_used = np.where(spectrogram.detector_mask == 1)[0]
     ndet = det_used.size
-    err_low = -1 * spectrogram.trigger_err
-    err_none = np.zeros_like(spectrogram.trigger_err)
-    err_high = spectrogram.trigger_err
+    err_low = -1 * spectrogram.triggers_err
+    err_none = np.zeros_like(spectrogram.triggers_err)
+    err_high = spectrogram.triggers_err
     
     livetime_fracs = []
     for err in [err_low, err_none, err_high]:
         if level == 1:
             dim_counts = (ndet, nenergies, ntimes)
-            trig = spectrogram.trigger + err
-            #shape0 = ndet#ntimes
+            trig = spectrogram.triggers + err
             
         elif level == 4:
             dim_counts = (nenergies,ntimes)
-            trig = np.transpose((spectrogram.trigger + err) * (np.ones(16)/16.))
-            #shape0 = nenergies
+            trig = np.transpose((spectrogram.triggers + err) * (np.ones(16)/16.))
         
         if np.sum(np.sign(err))/err.size == -1:
             trig[trig <=0] = 0

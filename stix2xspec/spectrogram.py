@@ -11,10 +11,8 @@ import warnings
 from .spectrogram_utils import *
 from .livetime import *
 from astropy.table import Table
-from .spectrogram_axes import stx_energy_axis, stx_time_axis
 from .write_spectrum2fits import *
 from matplotlib import pyplot as plt
-from ml_utils import print_arr_stats
 
 class Spectrogram:
     def __init__(self, filename, background = False, use_discriminators = True, replace_doubles = False, keep_short_bins = True, shift_duration = None, alpha = None, time_bin_filename = None, det_ind = None, pix_ind = None):
@@ -40,7 +38,7 @@ class Spectrogram:
         
         min_time_table = pd.read_csv(f"{os.environ['STX_CONF']}/detector/min_time_index.csv")
 
-        min_time = df.where(hstart_str < df.where(hstart_str > df[' start_date'])[' end_date']).dropna(how='all')['Mininmum time [cs]'].values[0]/10.
+        min_time = min_time_table.where(hstart_str < min_time_table.where(hstart_str > min_time_table[' start_date'])[' end_date']).dropna(how='all')['Mininmum time [cs]'].values[0]/10.
 
         if idx_short.size > 0:
             idx_double = np.where(self.duration[idx_short] == min_time)[0]
@@ -139,8 +137,8 @@ class Spectrogram:
 
         distance, time_shift = get_header_corrections(self.filename)
         primary_header, control, data, energy = open_spec_fits(self.filename)
-        data.data.counts_err = np.sqrt(data.data.counts_err**2 + data.data.counts)
-        data.data.triggers_err = np.sqrt(data.data.triggers_err**2 + data.data.triggers)
+        counts_err = np.sqrt(data.data.counts_err**2 + data.data.counts)
+        triggers_err = np.sqrt(data.data.triggers_err**2 + data.data.triggers)
         
         self.n_time = data.data['time'].size
         energies_used = np.where(control.data.energy_bin_mask == 1)[1]
@@ -166,6 +164,7 @@ class Spectrogram:
             shift_duration = 1
 
         #If time range of observation is during Nov 2020 RSCW apply average energy shift by default
+        self.energy_shift = 0
         if hstart_time > energy_shift_low_dt and hstart_time < energy_shift_high_dt:
             energy_shift = -1.6
             self.energy_shift = energy_shift
@@ -186,13 +185,12 @@ class Spectrogram:
         axis = -1 if self.alpha else 0 #time axis is last for pixel data but first for spectrogram data
         
         self.counts = shift_one_timestep(data.data.counts, shift_step = shift_step, axis = axis)
-        self.counts_err = shift_one_timestep(data.data.counts_err, shift_step = shift_step, axis = axis)
+        self.counts_err = shift_one_timestep(counts_err, shift_step = shift_step, axis = axis)
         self.triggers = shift_one_timestep(data.data.triggers, shift_step = shift_step, axis = axis)
-        self.triggers_err = shift_one_timestep(data.data.triggers_err, shift_step = shift_step, axis = axis)
+        self.triggers_err = shift_one_timestep(triggers_err, shift_step = shift_step, axis = axis)
         self.duration = shift_one_timestep(data.data.timedel, shift_step = -1*shift_step)
         self.time_bin_center = shift_one_timestep(data.data.time, shift_step = -1*shift_step)
         self.control_index = shift_one_timestep(data.data.control_index, shift_step = -1*shift_step)
-        
         if not keep_short_bins:
             # Remove short time bins with low counts
             self._remove_short_bins(hstart_str, replace_doubles = replace_doubles)
@@ -205,7 +203,7 @@ class Spectrogram:
             except AttributeError:
                 pass
 
-        else: # L1 files only?
+        elif self.alpha is None: # L1 files only?
             try:
                 full_counts = np.zeros((self.n_time,32))
                 full_counts[:, energies_used] = self.counts
@@ -255,7 +253,7 @@ class Spectrogram:
             self.counts_err[...,-1] = 0.
             
         energies_used = np.where(control.data.energy_bin_mask == 1)[1]
-        use_energies, out_mean, out_gmean, width, edges_1, edges_2 = self._get_energy_edges(energy, energies_used, energy_shift)
+        use_energies, out_mean, out_gmean, width, edges_1, edges_2 = self._get_energy_edges(energy, energies_used, self.energy_shift)
         
         energy_low = edges_2[:,0]
         energy_high  = edges_2[:,1]
@@ -285,6 +283,8 @@ class Spectrogram:
         # Find corresponding ELUT
         if not elut_filename:
             self.elut_filename = date2elut_file(self.hstart_str)
+        else:
+            self.elut_filename = elut_filename
             
         counts_in = self.counts
         #self.counts_in = counts_in
@@ -341,12 +341,12 @@ class Spectrogram:
         if not self.background:
 #            self.trigger = self.data['triggers'].squeeze().T  #is squeeze strictly necessary?
 #            self.trigger_err = self.data['triggers_err'].squeeze().T
-            self.triggers = self.triggers.squeeze()#.T
-            self.triggers_err = self.triggers_err.squeeze()#.T
+            self.triggers = self.triggers.squeeze().T
+            self.triggers_err = self.triggers_err.squeeze().T
         else:
             self.triggers = self.triggers.T #data['triggers'].T
             self.triggers_err = self.triggers_err.T #data['triggers_err'].T
-        if self.triggers.ndim == 1: #still want the final dim to be 1
+        if self.triggers.ndim == 1: #still want the first dim to be 1
             self.triggers = np.expand_dims(self.triggers,-1)
             self.triggers_err = np.expand_dims(self.triggers_err,-1)
          

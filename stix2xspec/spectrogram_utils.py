@@ -70,12 +70,11 @@ def get_header_corrections(fits_path):
     
 def open_spec_fits(filename):
     """Open a L1, L1A, or L4 FITS file and return the HDUs"""
-    hdul = fits.open(filename)
-    primary_header = hdul[0].header
-    control = hdul[1]
-    data = hdul[2]
-    energy = hdul[3] if hdul[3].name == 'ENERGIES' else hdul[4]
-    #data_header = data.header
+    with fits.open(filename) as hdul:#when to close this?
+        primary_header = hdul[0].header.copy()
+        control = hdul[1].copy()
+        data = hdul[2].copy()
+        energy = hdul[3].copy() if hdul[3].name == 'ENERGIES' else hdul[4].copy()
     return primary_header, control, data, energy
     
 def get_hstart_time(primary_header):
@@ -151,12 +150,6 @@ def shift_one_timestep(arr_in, axis = 0, shift_step = -1):
         return shifted_arr[:shift_step]
     else:
         return shifted_arr[shift_step:]
-#
-#def select_srm_channels(srm_edges, spec_edges):
-#    '''Return indices of channels in SRM which match channels of science data spectrum'''
-#    keep_channels = [srm_list.index(e1.tolist()) for e1 in spec_edges if e1 in srm_edges]
-#
-#    return keep_channels
     
 def write_cropped_srm(srm,keep_channels,fitsfilename=None, request_id = None, energy_shift = None):
     """Write a SRM FITS file with only the channels relevant to the observation retained"""

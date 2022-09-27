@@ -9,16 +9,14 @@ from datetime import timedelta as td
 #from .read_elut import read_elut
 from .spectrogram import Spectrogram
 from .triggergram import Triggergram
-from .spectrogram_axes import stx_time_axis, stx_energy_axis
 from .spectrogram_utils import *
 from matplotlib import pyplot as plt
-from ml_utils import print_arr_stats
 
-def convert_spectrogram(fits_path_data, fits_path_bk = None, shift_duration = 0, energy_shift = 0, distance = 1.0,  flare_location= [0,0], elut_filename = None, replace_doubles = False, keep_short_bins = True, apply_time_shift = True, to_fits= False, use_discriminators = True, alpha = None):
+def convert_spectrogram(fits_path_data, fits_path_bk = None, shift_duration = 0, energy_shift = 0, distance = 1.0,  flare_location= [0,0], elut_filename = None, replace_doubles = False, keep_short_bins = True, apply_time_shift = True, to_fits= False, use_discriminators = True, alpha = None, testing = True):
     """Convert STIX spectrogram for use in XSPEC (translation of stx_convert_spectrogram.pro, which coverts STIX spectrograms for use with OPSEX) """
     spec = Spectrogram(fits_path_data, shift_duration = shift_duration, replace_doubles = replace_doubles, keep_short_bins = keep_short_bins, background = False, use_discriminators = use_discriminators, alpha = alpha)
     dist_factor = 1./(spec.distance**2.) #when is this used?
-    spec.apply_elut()
+    spec.apply_elut(elut_filename = elut_filename)
 
     if spec.counts.ndim == 2: #it's from a L4 spectrogram
         spec.data_level = 4
@@ -33,13 +31,19 @@ def convert_spectrogram(fits_path_data, fits_path_bk = None, shift_duration = 0,
     spec_bk.control_data.energy_bin_mask = spec.control_data.energy_bin_mask
     spec_bk.pixel_mask = spec.pixel_mask
     spec_bk.detector_mask = spec.detector_mask
-    spec_bk.apply_elut(n_energies = spec.n_energies)
+    spec_bk.apply_elut(elut_filename = elut_filename, n_energies = spec.n_energies)
     spec_bk.n_energies = 32
     spec_bk.correct_counts()
     
     #print(".......... BACKGROUND SUBTRACTION ........")
     #extra background corrections - stx_convert_science_data2ospex 153-190
-    spec_in_corr, total_error = background_subtract(spec, spec_bk, counts_spec)
+    if not testing:
+        spec_in_corr, total_error = background_subtract(spec, spec_bk, counts_spec)
+    else:
+        rdict = background_subtract(spec, spec_bk, counts_spec, testing = testing)
+        rdict['spec'] = spec
+        rdict['spec_bk'] = spec_bk
+        return rdict
     
     emin = 1
     emax = 150
@@ -105,7 +109,7 @@ def new_energy_axis(spec, emin = 1, emax = 150):
     #self.error = total_error[new_energies,:]
     return e_axis_new, new_energies
 
-def background_subtract(spectrogram, spectrogram_bk, counts_spec):
+def background_subtract(spectrogram, spectrogram_bk, counts_spec, testing = False):
     """Perform background subtraction of spectrogram counts
     
     Inputs:
@@ -150,6 +154,8 @@ def background_subtract(spectrogram, spectrogram_bk, counts_spec):
     spec_in_corr *= eff_livetime_fraction_expanded.T
     total_error *= eff_livetime_fraction_expanded.T
     
-    #rdict = {'spec_in_corr':spec_in_corr,'spec_in_uncorr':spec_in_uncorr,'corrected_counts':corrected_counts, 'corrected_counts_bk':corrected_counts_bk, 'counts_spec':counts_spec, 'spec_in_bk':spec_in_bk,'total_error':total_error,'corrected_error':corrected_error, 'error_bk':error_bk, 'eff_lt':eff_livetime_fraction_expanded} #do this differently
+    if testing:
+        rdict = {'spec_in_corr':spec_in_corr,'spec_in_uncorr':spec_in_uncorr,'corrected_counts':corrected_counts, 'corrected_counts_bk':corrected_counts_bk, 'counts_spec':counts_spec, 'spec_in_bk':spec_in_bk,'total_error':total_error,'corrected_error':corrected_error, 'error_bk':error_bk, 'eff_lt':eff_livetime_fraction_expanded} #do this differently
+        return rdict
     return spec_in_corr, total_error
 
