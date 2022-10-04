@@ -29,11 +29,11 @@ def date2elut_file(date, stx_conf = None):
 
 def read_elut(elut_filename = None, scale1024 = True, ekev_actual = True):
     """ This function finds the most recent ELUT csv file, reads it, and returns the gain and offset used to make it along with the edges of the Edges in keV (Exact) and ADC 4096, rounded """
+    stx_conf = os.environ['STX_CONF']
     if not elut_filename:
-        stx_conf=os.environ['STX_CONF']
-        elut_filename = sorted(glob.glob(f"{stx_conf}/elut/elut_table*.csv"), key=os.path.getmtime)[-1] #most recent ELUT
+        elut_filename = f"{stx_conf}/elut/{sorted(glob.glob(f"{stx_conf}/elut/elut_table*.csv"), key=os.path.getmtime)[-1]}" #most recent ELUT
         
-    elut = pd.read_csv(f"{stx_conf}/elut/{elut_filename}", header = 2)
+    elut = pd.read_csv(elut_filename, header = 2)
         
     if scale1024:
         scl = 4.0
