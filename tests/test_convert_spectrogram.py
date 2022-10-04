@@ -37,7 +37,7 @@ def mean_minmax(arr):
     vals.extend([np.mean(arr),np.min(arr),np.max(arr)])
     return vals
     
-def test_config(atol = 1e-4, background = False, pixel = False, energy_shift = 0, use_discriminators = True, replace_doubles = False, keep_short_bins = True, shift_duration = None, alpha = None, time_bin_filename = None):
+def test_config(atol = 1e-4, background = False, pixel = False, energy_shift = 0, use_discriminators = True, replace_doubles = False, keep_short_bins = True, shift_duration = None, alpha = None, time_bin_filename = None, testing = True):
     return locals()
     
 def test_l4_from_fits(**kwargs):
@@ -110,8 +110,12 @@ def test_from_fits(fitsfile, background = False, pixel=False, atol = 1e-4,energy
     else:
         assert_allclose(spec.counts, idl_counts, atol=atol)
         assert_allclose(spec.counts_err, idl_counts_err, atol=atol)
-        assert_allclose(spec.triggers.T, idl_triggers, atol=atol)
-        assert_allclose(spec.triggers_err.T, idl_triggers_err, atol=atol)
+        if spec.triggers.shape == idl_triggers.shape:
+            assert_allclose(spec.triggers, idl_triggers, atol=atol)
+            assert_allclose(spec.triggers_err, idl_triggers_err, atol=atol)
+        else:
+            assert_allclose(spec.triggers.T, idl_triggers, atol=atol)
+            assert_allclose(spec.triggers_err.T, idl_triggers_err, atol=atol)
     
     ## compare time_bin_center and duration
     idl("time = data_str.time")
@@ -149,7 +153,7 @@ def test_from_fits(fitsfile, background = False, pixel=False, atol = 1e-4,energy
     
 def test_l4_apply_elut(**kwargs):
     l4_test, _ = get_l4_testfiles()
-    kwargs['alpha'] = 0
+    #kwargs['alpha'] = 0
     test_apply_elut(l4_test, **kwargs)
     
 def test_l1a_apply_elut(**kwargs):
@@ -165,7 +169,7 @@ def test_l1bg_apply_elut(**kwargs):
     test_apply_elut(l1bg_test, **kwargs)
     
 def test_apply_elut(fitsfile, background = False, pixel=False, atol = 1e-4,energy_shift = 0, use_discriminators = True, replace_doubles = False, keep_short_bins = True, shift_duration = None, alpha = None, time_bin_filename = None):
-    spec = Spectrogram(fitsfile, background = background, alpha = alpha)
+    spec = Spectrogram(fitsfile, background = background)
     spec.apply_elut(elut_filename = 'elut_table_20211209.csv')
 
     ## same in IDL
@@ -246,7 +250,7 @@ def test_apply_elut(fitsfile, background = False, pixel=False, atol = 1e-4,energ
     
 def test_l4_correction(**kwargs):
     l4_test, _ = get_l4_testfiles()
-    kwargs['alpha'] = 0
+    #kwargs['alpha'] = 0
     test_correction(l4_test, **kwargs)
     
 def test_l1a_correction(**kwargs):
@@ -273,10 +277,10 @@ def test_l1abg_correction(**kwargs):
     test_correction(l1abg_test, **kwargs)
     
 def test_correction(fitsfile, background = False, pixel=False, atol = 1e-4,energy_shift = 0, use_discriminators = True, replace_doubles = False, keep_short_bins = True, shift_duration = None, alpha = None, time_bin_filename = None):
-    spec = Spectrogram(fitsfile, background = background, alpha = alpha)
+    spec = Spectrogram(fitsfile, background = background)
     spec.apply_elut(elut_filename = 'elut_table_20211209.csv')
-    if spec.alpha == 0:
-        spec.data_level = 4
+    #if spec.alpha == 0:
+    #    spec.data_level = 4
     spec.correct_counts()
 
     ## same in IDL
@@ -383,7 +387,7 @@ def test_correction(fitsfile, background = False, pixel=False, atol = 1e-4,energ
 
 def test_l4_conversion(**kwargs):
     l4_test, bg_file = get_l4_testfiles()
-    kwargs['alpha'] = 0
+    #kwargs['alpha'] = 0
     test_conversion(l4_test, bg_file, **kwargs)
     
 def test_l1a_conversion(**kwargs):
@@ -396,7 +400,7 @@ def test_l1a_conversion(**kwargs):
 #    test_from_fits(l4_test)
     
 def test_conversion(fitsfile, bgfile, atol = 1e-4,energy_shift = 0, pixel=False, use_discriminators = True, replace_doubles = False, keep_short_bins = True, shift_duration = None, alpha = None, time_bin_filename = None):
-    rdict = convert_spectrogram(fitsfile, bgfile, elut_filename = 'elut_table_20211209.csv', alpha = alpha, testing = True)
+    rdict = convert_spectrogram(fitsfile, bgfile, elut_filename = 'elut_table_20211209.csv', testing = True)
     spec = rdict['spec']
     spec_bk = rdict['spec_bk']
     ## same in IDL

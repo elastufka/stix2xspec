@@ -12,14 +12,14 @@ from .triggergram import Triggergram
 from .spectrogram_utils import *
 from matplotlib import pyplot as plt
 
-def convert_spectrogram(fits_path_data, fits_path_bk = None, shift_duration = 0, energy_shift = 0, distance = 1.0,  flare_location= [0,0], elut_filename = None, replace_doubles = False, keep_short_bins = True, apply_time_shift = True, to_fits= False, use_discriminators = True, alpha = None, testing = True):
+def convert_spectrogram(fits_path_data, fits_path_bk = None, shift_duration = 0, energy_shift = 0, distance = 1.0,  flare_location= [0,0], elut_filename = None, replace_doubles = False, keep_short_bins = True, apply_time_shift = True, to_fits= False, use_discriminators = True, testing = False):
     """Convert STIX spectrogram for use in XSPEC (translation of stx_convert_spectrogram.pro, which coverts STIX spectrograms for use with OPSEX) """
-    spec = Spectrogram(fits_path_data, shift_duration = shift_duration, replace_doubles = replace_doubles, keep_short_bins = keep_short_bins, background = False, use_discriminators = use_discriminators, alpha = alpha)
+    spec = Spectrogram(fits_path_data, shift_duration = shift_duration, replace_doubles = replace_doubles, keep_short_bins = keep_short_bins, background = False, use_discriminators = use_discriminators)
     dist_factor = 1./(spec.distance**2.) #when is this used?
     spec.apply_elut(elut_filename = elut_filename)
 
     if spec.counts.ndim == 2: #it's from a L4 spectrogram
-        spec.data_level = 4
+        #spec.data_level = 4
         counts_spec = spec.counts
     else:
         counts_spec = np.sum(spec.counts,axis=1) #sum over detectors

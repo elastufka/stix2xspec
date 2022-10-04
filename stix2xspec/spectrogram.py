@@ -15,19 +15,31 @@ from .write_spectrum2fits import *
 from matplotlib import pyplot as plt
 
 class Spectrogram:
-    def __init__(self, filename, background = False, use_discriminators = True, replace_doubles = False, keep_short_bins = True, shift_duration = None, alpha = None, time_bin_filename = None, det_ind = None, pix_ind = None):
+    def __init__(self, filename, background = False, use_discriminators = True, replace_doubles = False, keep_short_bins = True, shift_duration = None, time_bin_filename = None, det_ind = None, pix_ind = None):
         """For L4 files, need to specify that alpha = 0"""
         self.filename = filename
+        if 'spectrogram' in filename: #this isn't a sure thing but if it's from the SDC it will be in the filename
+            self._alpha = 0
+            self._data_level = 4
         self.background = background
         self.det_ind = det_ind
         self.pix_ind = pix_ind
         self.history = "init"
-        self._from_fits(use_discriminators = use_discriminators, replace_doubles = replace_doubles, keep_short_bins = keep_short_bins, shift_duration = shift_duration, alpha = alpha, time_bin_filename = time_bin_filename)
+        self._from_fits(use_discriminators = use_discriminators, replace_doubles = replace_doubles, keep_short_bins = keep_short_bins, shift_duration = shift_duration, time_bin_filename = time_bin_filename)
+        
+    #attributes that are important to be read-only
+    @property
+    def data_level(self):
+        return self._data_level
+    
+    @property
+    def alpha(self):
+        return self._alpha
         
     def _alpha_from_header(self, primary_header):
         processing_level = primary_header['LEVEL']
         alpha = 1 if processing_level.strip() == 'L1A' else 0
-        self.alpha = alpha
+        self._alpha = alpha
         
     def _remove_short_bins(self, hstart_str, replace_doubles = False):
         counts_for_time_bin = sum(self.counts[1:10,:],1) # shape is ex. (32,)
@@ -105,7 +117,7 @@ class Spectrogram:
         eff_ewidth =  true_ewidth/ewidth
         self.eff_ewidth = eff_ewidth
         
-    def _from_fits(self, use_discriminators = True, replace_doubles = False, keep_short_bins = True, shift_duration = None, alpha = None, time_bin_filename = None):
+    def _from_fits(self, use_discriminators = True, replace_doubles = False, keep_short_bins = True, shift_duration = None, time_bin_filename = None):
         """Read spectrogram FITS file. Same function as stx_read_spectrogram_fits_file and stx_read_pixel_data_fits_file
         
         args:
@@ -145,11 +157,12 @@ class Spectrogram:
 
         hstart_str, hstart_time = get_hstart_time(primary_header)
         
-        if alpha is None:
+        if not hasattr(self, 'alpha'):
             self._alpha_from_header(primary_header)
-        else:
-            self.alpha = alpha
-
+            
+        if not hasattr(self, 'data_level'): #is there a nicer way to do this
+            self._data_level = [int(c) for c in primary_header['LEVEL'].strip() if c in ['1','4']][0]
+            
         #trigger_zero should always be 0 as far as I know... it gets modified by mreadfits 2.26
     #    try:
     #        trigger_zero = data.header['TZERO3']
@@ -203,7 +216,7 @@ class Spectrogram:
             except AttributeError:
                 pass
 
-        elif self.alpha is None: # L1 files only?
+        elif self.data_level == 1: # L1 files only?
             try:
                 full_counts = np.zeros((self.n_time,32))
                 full_counts[:, energies_used] = self.counts
@@ -278,7 +291,6 @@ class Spectrogram:
         
     def apply_elut(self, elut_filename = None, n_energies = None):
         """All the stuff that happens after stx_read_..._fits_file and before stx_convert_science_data2ospex. """
-        self.data_level = [int(c) for c in self.primary_header['LEVEL'].strip() if c in ['1','4']][0]
             
         # Find corresponding ELUT
         if not elut_filename:
@@ -384,12 +396,22 @@ class Spectrogram:
         
     def _counts_to_rate(self):
         '''convert counts to rate for writing to FITS'''
-        ltarr = np.tile(self.eff_livetime_fraction, self.n_energies).reshape((self.n_energies,self.eff_livetime_fraction.size)).T #not sure why this and the next line need to be different for reshape
+        try:
+            ltarr = np.tile(self.eff_livetime_fraction, self.n_energies).reshape((self.n_energies,self.eff_livetime_fraction.size)).T #not sure why this and the next line need to be different for reshape
+        except AttributeError:
+            self.eff_livetime_fraction = self._get_eff_livetime_fraction(expanded = False)
+            ltarr = np.tile(self.eff_livetime_fraction, self.n_energies).reshape((self.n_energies,self.eff_livetime_fraction.size)).T
         durarr = np.tile(self.t_axis.duration, self.n_energies).reshape((self.duration.size,self.n_energies))
-        rate = self.counts/(durarr * ltarr) #fdiv... replace denominator 0s with 1s (but there shouldn't be any zeros in duration or livetime fraction)
-        rate_err = self.total_error/(durarr * ltarr) #fdiv... replace denominator 0s with 1s
+        rate = self.counts.squeeze()/(durarr * ltarr) #fdiv... replace denominator 0s with 1s (but there shouldn't be any zeros in duration or livetime fraction)
+        try:
+            rate_err = self.total_error.squeeze()/(durarr * ltarr) #fdiv... replace denominator 0s with 1s
+        except AttributeError:
+            #if self.counts.shape != self.error.shape:
+            #    self.error = self.error.T #need to check if this is correct. so far is only true for background files
+            rate_err = self.error.squeeze()/(durarr * ltarr) #no total error due to background correction
         self.rate = rate
         self.stat_err = rate_err
+        self.history += "+counts_to_rate"
         
     def _get_eff_livetime_fraction(self, expanded = True):
         if self.data_level == 4:
@@ -416,7 +438,7 @@ class Spectrogram:
         sys_err = np.tile(sys_err, self.n_times).reshape((self.n_times,self.n_energies))
         return sys_err
         
-    def select_energy_channels(self, elow):
+    def _select_energy_channels(self, elow):
         """Trim converted data to match the channels in an existing srm file, since unable to generate srm files via Python at the moment """
         ll=list(self.e_axis.low)
         chan_idx = [ll.index(e) for e in ll if e in elow]
@@ -430,28 +452,36 @@ class Spectrogram:
         self.n_energies = len(chan_idx)
         self.counts = self.counts[:,chan_idx]
         self.error = self.error[chan_idx,:]
-    
-    def spectrum_to_fits(self, fitsfilename, srm_file = "stx_srm_full.fits"):
         
-        srm = fits.open(resources.path('stix2xspec/data',srm_file)) # Need to match the number of channels in here!
-        self.select_energy_channels(srm[2].data.E_MIN + self.energy_shift) #have to add energy shift if necessary!
-        #should also trim the response matrix if the number of channels in the spectrum are fewer!
+    def _write_srm_from_file(self, srm_file = "stx_srm_full.fits"):
+        """For now, write SRM by selecting matching energy channels from pre-generated .srm file and writing to a new file if necessary."""
+        with resources.path('stix2xspec.data',srm_file) as srmfile:
+            srm = fits.open(str(srmfile)) # Need to match the number of channels in here!
+        self._select_energy_channels(srm[2].data.E_MIN + self.energy_shift) #have to add energy shift if necessary!
         srm_nenergies = srm[1].data.N_CHAN[0]
         if srm_nenergies != self.n_energies or self.energy_shift:
             srm_edges = np.array([[mn,mx] for mn,mx in zip(srm[2].data.E_MIN + self.energy_shift, srm[2].data.E_MAX + self.energy_shift)])
             spec_edges = np.float32(self.e_axis.edges_2)
             srm_channels = [np.where(srm_edges == e1)[0][0] for e1 in spec_edges if e1 in srm_edges]
-            #srm_channels = select_srm_channels(srm_edges, self.e_axis.edges_2) #return dict?
-            print(f"srm_channels {srm_channels}")
             respfile = write_cropped_srm(srm,srm_channels, request_id = self.request_id, energy_shift = self.energy_shift)
-            
-        #should also get the effective area from here,
         else:
             respfile = srm_file[srm_file.rfind('/')+1:]
         srm.close()
         print(f"Response file: {respfile}")
+        self.respfile = respfile
     
-        timedict = ogip_time_calcs(self)
+    def spectrum_to_fits(self, fitsfilename, srm_file = "stx_srm_full.fits", write_srm = True):
+        """Write the spectrogram to an OGIP-compatible FITS file. It can either be background-subtracted or not. Currently cannot be used to write background files."""
+        
+        if write_srm:
+            self._write_srm_from_file()
+            
+        try:
+            timedict = ogip_time_calcs(self)
+        except AttributeError:
+            self.eff_livetime_fraction = self._get_eff_livetime_fraction(expanded = False) #can't do this after backgrounds subtraction, counts will be wrong...
+            timedict = ogip_time_calcs(self)
+
         self.exposure = timedict['exposure']
         # Make the primary header
         primary_header = make_stix_header(self,primary = True)
@@ -459,14 +489,10 @@ class Spectrogram:
         # Make the rate table
         rate_names = ['RATE', 'STAT_ERR', 'CHANNEL', 'LIVETIME', 'SPEC_NUM', 'TIME', 'TIMEDEL','SYS_ERR']
         
-        try:
-            eff_livetime_fraction = self.eff_livetime_fraction
-        except AttributeError:
-            eff_livetime_fraction = self._get_eff_livetime_fraction(expanded = False) #can't do this after backgrounds subtraction, counts will be wrong...
-
-        self._counts_to_rate()
+        if not "counts_to_rate" in self.history:
+            self._counts_to_rate()
         sys_err = self._energy_dependent_sys_err()
-        rate_table = Table([self.rate, self.stat_err, timedict['channel'].astype('>i4'), eff_livetime_fraction, timedict['specnum'].astype('>i2'), Time(timedict['timecen']).mjd, timedict['timedel'].astype('>f4'),sys_err], names = rate_names)
+        rate_table = Table([self.rate, self.stat_err, timedict['channel'].astype('>i4'), self.eff_livetime_fraction, timedict['specnum'].astype('>i2'), Time(timedict['timecen']).mjd, timedict['timedel'].astype('>f4'),sys_err], names = rate_names)
 
         # Make the energy channel table
         # Update keywords that need updating
@@ -492,10 +518,10 @@ class Spectrogram:
         energy_HDU = fits.BinTableHDU(data = energy_table)
         att_HDU = fits.BinTableHDU(data = att_table)
         # fill out headers
-        make_rate_header(rate_HDU.header,self,respfile=respfile) #should update in place
-        make_stix_header(self,hdr=energy_HDU.header,extname='ENEBAND',respfile=respfile)
-        make_stix_header(self, hdr=att_HDU.header,extname='STIX Spectral Object Parameters',respfile=respfile)
-        hdul = fits.HDUList([primary_HDU, rate_HDU, energy_HDU,att_HDU])
+        make_rate_header(rate_HDU.header, self, respfile = self.respfile) #should update in place
+        make_stix_header(self,hdr = energy_HDU.header, extname='ENEBAND', respfile = self.respfile)
+        make_stix_header(self, hdr = att_HDU.header, extname='STIX Spectral Object Parameters', respfile = self.respfile)
+        hdul = fits.HDUList([primary_HDU, rate_HDU, energy_HDU, att_HDU])
         hdul.writeto(fitsfilename)
         print(f"Spectrogram written to {os.getcwd()}/{fitsfilename}")
     

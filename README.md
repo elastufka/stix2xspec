@@ -17,6 +17,8 @@ Convert STIX science data (L1A, L1, or L4 spectrograms or pixel data) to a forma
 
 </div>
 
+<!--
+
 ## Very first steps
 
 ### Initialize your code
@@ -137,6 +139,7 @@ Articles:
 - Files such as: `LICENSE`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, and `SECURITY.md` are generated automatically.
 - [`Stale bot`](https://github.com/apps/stale) that closes abandoned issues after a period of inactivity. (You will only [need to setup free plan](https://github.com/marketplace/stale)). Configuration is [here](https://github.com/stix2xspec/stix2xspec/blob/master/.github/.stale.yml).
 - [Semantic Versions](https://semver.org/) specification with [`Release Drafter`](https://github.com/marketplace/actions/release-drafter).
+-->
 
 ## Installation
 
@@ -162,6 +165,104 @@ or with `Poetry`:
 poetry run stix2xspec --help
 ```
 
+## Example - Background-subtract and convert a STIX FITS file 
+
+Download a FITS file from the [STIX Data Center (SDC)](https://datacenter.stix.i4ds.net/). More details about STIX data products, along with tutorials, can be found on the [STIX wiki](https://datacenter.stix.i4ds.net/wiki/index.php?title=STIX_Data_Products). Official science data products are level 1 (L1). These can be found on the [STIX archive server](http://dataarchive.stix.i4ds.net/data/fits/). 
+
+Pre-release data products (L1A) are supported by this software but not officially recommended for use. There are two types of such data, spectrogram data and pixel data. Spectrogram data have _stix-sci-spectrogram_ in their filename and can be searched for using _product_type='xray-spec'_ in  [stixdcpy FitsQuery](https://github.com/i4Ds/stixdcpy ). They tend to cover very long time intervals. Pixel data have _stix-sci-xray_ in the filename, and are most often generated for single events (solar flares). Both kinds are returned when searching with _product_type='l1'_. 
+
+Download the corresponding background file. Background files can be found by using the filter _filter='BKG'_ or by looking at the file description on the SDC.
+
+Subtracting the background and converting the file to an OGIP-compatible spectrogram is done via the following:
+
+```python
+from stix2xspec.stix2xspec import convert_spectrogram
+
+fitsfile = 'solo_L1A_stix-sci-spectrogram-2207238956_20220723T122007-20220723T182511_079258_V01.fits' # full path
+bgfile = 'solo_L1A_stix-sci-xray-l1-2207235029_20220723T113947-20220723T122747_079205_V01.fits'
+outfile = convert_spectrogram(fitsfile, bgfile, to_fits = True)
+```
+
+Along with the important data processing steps of applying the error lookup table (ELUT) and performing livetime-correction, background subtraction is performed, counts are converted to count rate and an energy-dependent systematic error term is generated, which is useful when using XSPEC. Any necessary FITS header quantities are calculated and added to the existing header as needed.
+
+A .srm file containing the spectral response matrix is also written. This is not yet generated via the appropriate calculations; rather, an existing .srm file is edited to match the energy channels contained in the input file. The STIX spectral response matrix is relatively stable over time, but it can be generated using the official [IDL ground software](https://github.com/i4Ds/STIX-GSW).  
+
+## Example - apply ELUT and livetime correction to spectrogram or pixel data
+
+Data processing can be performed with or without the final step of conversion to count rate.
+
+```python
+from stix2xspec.spectrogram import Spectrogram 
+
+spec = Spectrogram(fitsfile)
+spec.apply_elut()
+spec.correct_counts()
+```
+
+Counts can be converted to count rate:
+
+```python
+spec._counts_to_rate()
+```
+
+The same can be done for background files:
+
+```python
+from stix2xspec.spectrogram import Spectrogram 
+
+spec_bg = Spectrogram(bgfile, background = True, use_discriminators = False)
+spec_bg.apply_elut()
+spec_bg.correct_counts()
+```
+
+## Example - fit STIX spectrum with solar-specific models in XSPEC
+
+This requires additional installation of  [sunpy/sunxspex](https://github.com/sunpy/sunxspex) and of course [XSPEC](https://heasarc.gsfc.nasa.gov/xanadu/xspec/), which comes together with [pyxspec](https://heasarc.gsfc.nasa.gov/xanadu/xspec/python/html/index.html). For now, the XSPEC solar models are found in [this fork of sunxspex](https://github.com/elastufka/sunxspex/tree/xspec_functions). 
+
+Be sure to enable XSPEC via command line before starting a Python session.
+
+```bash
+
+```
+Add the thermal bremsstrahlung model _vth_ and the non-thermal thick-target bremsstrahlung model _bremsstrahlung_thick_target_ to XSPEC, then fit them first individually and then together.
+
+```python 
+import xspec
+from stix2xspec.xspec_utils import *
+from sunxspex import xspec_models
+
+mod_th = sunxspex.xspec_models.ThermalModel()
+xspec.AllModels.addPyMod(mod_th.model, mod_th.ParInfo, 'add')
+mod_th.print_ParInfo() # see the initial configuration of parameters
+
+mod_nt = sunxspex.xspec_models.ThickTargetModel()
+xspec.AllModels.addPyMod(mod_nt.model, mod_nt.ParInfo, 'add')
+mod_nt.print_ParInfo() # see the initial configuration of parameters
+
+xspec.AllData.clear() # get rid of any data that is still loaded from previous runs
+xspec.AllData(f"1:1 {'stx_spectrum_20220723_122031.fits'}{{1280}}") # fit the 1280th data row in the converted spectrogram file. make sure the .srm file is in the same folder as the spectrogram file.
+
+plot_data(xspec, erange = [4,150],title = f'STIX spectrum').show()
+model, chisq = fit_thermal_nonthermal(xspec, thmodel = 'vth', ntmodel = 'bremsstrahlung_thick_target', lowErange = [3,10])
+```
+XSPEC will display fitted model parameters either in the terminal or directly in the Python/Jupyter session, depending on how standard output is configured. You can also print and plot using the following commands (requires pandas and plotLy).
+
+```python
+show_model(model, df=True)
+fig, plotdata0 = plot_fit(xspec, model, fitrange = [3,30],erange=[2,35], plotdata_dict = True)
+fittext = annotate_plot(model, chisq=chisq, exclude_parameters = ['norm','Abundanc','Redshift'], MK=True)
+fig.update_layout(width=650, yaxis_range = [-1,5])
+fig.add_annotation(x=1.5,y=.5,text=fittext,xref='paper',yref='paper', showarrow = False)
+fig.show()
+```
+
+<!--
+## Example - Convert STIX FITS file and background file independently
+
+no use case for this at the moment
+-->
+
+<!--
 ### Makefile usage
 
 [`Makefile`](https://github.com/stix2xspec/stix2xspec/blob/master/Makefile) contains a lot of functions for faster development.
@@ -354,7 +455,7 @@ Or to remove all above run:
 make cleanup
 ```
 
-</p>
+</p> -->
 </details>
 
 ## 📈 Releases
