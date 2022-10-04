@@ -11,8 +11,11 @@ from datetime import datetime as dt
 from datetime import timedelta as td
 
 
-def date2elut_file(date, stx_conf=os.environ['STX_CONF']):
+def date2elut_file(date, stx_conf = None):
     """Find the ELUT table to be applied, given the date of the observation. ELUT tables are available in STIX-CONF https://github.com/i4Ds/STIX-CONF"""
+    
+    if not stx_conf:
+        stx_conf = os.environ['STX_CONF']
     elut_index=glob.glob(f"{stx_conf}/elut/elut_index.csv")[0]
     elut_df=pd.read_csv(elut_index)
     elut_df[' end_date'].replace('none',dt.now().strftime("%Y-%m-%dT%H:%M:%S"),inplace=True)
@@ -24,9 +27,10 @@ def date2elut_file(date, stx_conf=os.environ['STX_CONF']):
     elut_filename = elut_df.query("@date > start_date and @date <= end_date")[' elut_file'].iloc[0]# elut filename that applies to desired date
     return elut_filename
 
-def read_elut(elut_filename = None, scale1024 = True, ekev_actual = True, stx_conf=os.environ['STX_CONF']):
+def read_elut(elut_filename = None, scale1024 = True, ekev_actual = True):
     """ This function finds the most recent ELUT csv file, reads it, and returns the gain and offset used to make it along with the edges of the Edges in keV (Exact) and ADC 4096, rounded """
     if not elut_filename:
+        stx_conf=os.environ['STX_CONF']
         elut_filename = sorted(glob.glob(f"{stx_conf}/elut/elut_table*.csv"), key=os.path.getmtime)[-1] #most recent ELUT
         
     elut = pd.read_csv(f"{stx_conf}/elut/{elut_filename}", header = 2)

@@ -10,7 +10,7 @@ if __name__ == "__main__" :
         spec = Spectrogram(str(aa))
         spec.apply_elut()
         spec.correct_counts()
-        spec._counts_to_rate()
+        spec.to_rate()
         spec.spectrum_to_fits("test_example2.fits")
         
         spec_bg = Spectrogram(str(bb), background = True, use_discriminators = False)

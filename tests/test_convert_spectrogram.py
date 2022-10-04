@@ -511,3 +511,6 @@ def test_ogip_time_calcs():
     spec_l1.correct_counts()
     timedict_l1 = ogip_time_calcs(spec_l1)
     print("L1 test passed successfully")
+
+if __name__ == "__main__":
+    test_l4_conversion()

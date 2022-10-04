@@ -165,11 +165,21 @@ or with `Poetry`:
 poetry run stix2xspec --help
 ```
 
+## Dependencies
+
+This software requires the files stored in [STIX-CONF](https://github.com/i4Ds/STIX-CONF). Set up an environment variable that points to this directory.
+
+These files can also be found in the [IDL ground software](https://github.com/i4Ds/STIX-GSW) _dbase_ directory.  
+
+```bash
+export STX_CONF="/path/to/STIX-CONF"
+```
+
 ## Example - Background-subtract and convert a STIX FITS file 
 
 Download a FITS file from the [STIX Data Center (SDC)](https://datacenter.stix.i4ds.net/). More details about STIX data products, along with tutorials, can be found on the [STIX wiki](https://datacenter.stix.i4ds.net/wiki/index.php?title=STIX_Data_Products). Official science data products are level 1 (L1). These can be found on the [STIX archive server](http://dataarchive.stix.i4ds.net/data/fits/). 
 
-Pre-release data products (L1A) are supported by this software but not officially recommended for use. There are two types of such data, spectrogram data and pixel data. Spectrogram data have _stix-sci-spectrogram_ in their filename and can be searched for using _product_type='xray-spec'_ in  [stixdcpy FitsQuery](https://github.com/i4Ds/stixdcpy ). They tend to cover very long time intervals. Pixel data have _stix-sci-xray_ in the filename, and are most often generated for single events (solar flares). Both kinds are returned when searching with _product_type='l1'_. 
+Pre-release data products (L1A) are supported by this software but not officially recommended for use. There are two types of such data, spectrogram data and pixel data. Spectrogram data have _stix-sci-spectrogram_ in their filename and can be searched for using _product_type='xray-spec'_ in  [stixdcpy FitsQuery](https://github.com/i4Ds/stix0dcpy ). They tend to cover very long time intervals. Pixel data have _stix-sci-xray_ in the filename, and are most often generated for single events (solar flares). Both kinds are returned when searching with _product_type='l1'_. 
 
 Download the corresponding background file. Background files can be found by using the filter _filter='BKG'_ or by looking at the file description on the SDC.
 
@@ -182,6 +192,16 @@ fitsfile = 'solo_L1A_stix-sci-spectrogram-2207238956_20220723T122007-20220723T18
 bgfile = 'solo_L1A_stix-sci-xray-l1-2207235029_20220723T113947-20220723T122747_079205_V01.fits'
 outfile = convert_spectrogram(fitsfile, bgfile, to_fits = True)
 ```
+
+![](spectrogram_readme.png)
+
+**Figure 1**: A portion of the converted spectrogram
+
+
+![](spectrogram_readme.png)
+
+**Figure 2**: The same portion of the same input and background files, converted using the official IDL STIX ground software (_convert_spectrogram.pro_)
+
 
 Along with the important data processing steps of applying the error lookup table (ELUT) and performing livetime-correction, background subtraction is performed, counts are converted to count rate and an energy-dependent systematic error term is generated, which is useful when using XSPEC. Any necessary FITS header quantities are calculated and added to the existing header as needed.
 
@@ -202,7 +222,7 @@ spec.correct_counts()
 Counts can be converted to count rate:
 
 ```python
-spec._counts_to_rate()
+spec.to_rate()
 ```
 
 The same can be done for background files:
@@ -242,17 +262,18 @@ mod_nt.print_ParInfo() # see the initial configuration of parameters
 xspec.AllData.clear() # get rid of any data that is still loaded from previous runs
 xspec.AllData(f"1:1 {'stx_spectrum_20220723_122031.fits'}{{1280}}") # fit the 1280th data row in the converted spectrogram file. make sure the .srm file is in the same folder as the spectrogram file.
 
-plot_data(xspec, erange = [4,150],title = f'STIX spectrum').show()
+plot_data(xspec, erange = [4,50],title = f'STIX spectrum').show()
 model, chisq = fit_thermal_nonthermal(xspec, thmodel = 'vth', ntmodel = 'bremsstrahlung_thick_target', lowErange = [3,10])
 ```
+
 XSPEC will display fitted model parameters either in the terminal or directly in the Python/Jupyter session, depending on how standard output is configured. You can also print and plot using the following commands (requires pandas and plotLy).
 
 ```python
 show_model(model, df=True)
-fig, plotdata0 = plot_fit(xspec, model, fitrange = [3,30],erange=[2,35], plotdata_dict = True)
+fig = plot_fit(xspec, model, fitrange = [3,30])
 fittext = annotate_plot(model, chisq=chisq, exclude_parameters = ['norm','Abundanc','Redshift'], MK=True)
 fig.update_layout(width=650, yaxis_range = [-1,5])
-fig.add_annotation(x=1.5,y=.5,text=fittext,xref='paper',yref='paper', showarrow = False)
+fig.add_annotation(x=1.75,y=.5,text=fittext,xref='paper',yref='paper', showarrow = False)
 fig.show()
 ```
 ![](specfit_readme.png)

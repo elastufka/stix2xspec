@@ -394,6 +394,10 @@ class Spectrogram:
         self.livetime_fraction = livetime_frac
         self.history += "+livetime_correction"
         
+    def to_rate(self):
+        """convert counts to count rate"""
+        self._counts_to_rate()
+    
     def _counts_to_rate(self):
         '''convert counts to rate for writing to FITS'''
         try:
