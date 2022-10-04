@@ -1,0 +1,231 @@
+    [{
+        "DG": 0,
+        "SC": 0,
+        "Q": 0,
+        "SC_TWIN": 0,
+        "ADG_IDX": 0
+    },
+    {
+        "DG": 1,
+        "SC": 1,
+        "Q": 1,
+        "SC_TWIN": 2,
+        "ADG_IDX": 1
+    },
+    {
+        "DG": 1,
+        "SC": 2,
+        "Q": 1,
+        "SC_TWIN": 1,
+        "ADG_IDX": 1
+    },
+    {
+        "DG": 2,
+        "SC": 7,
+        "Q": 1,
+        "SC_TWIN": 6,
+        "ADG_IDX": 2
+    },
+    {
+        "DG": 2,
+        "SC": 6,
+        "Q": 1,
+        "SC_TWIN": 7,
+        "ADG_IDX": 2
+    },
+    {
+        "DG": 3,
+        "SC": 11,
+        "Q": 1,
+        "SC_TWIN": 5,
+        "ADG_IDX": 3
+    },
+    {
+        "DG": 3,
+        "SC": 5,
+        "Q": 1,
+        "SC_TWIN": 11,
+        "ADG_IDX": 3
+    },
+    {
+        "DG": 4,
+        "SC": 13,
+        "Q": 1,
+        "SC_TWIN": 12,
+        "ADG_IDX": 4
+    },
+    {
+        "DG": 4,
+        "SC": 12,
+        "Q": 1,
+        "SC_TWIN": 13,
+        "ADG_IDX": 4
+    },
+    {
+        "DG": 1,
+        "SC": 14,
+        "Q": 2,
+        "SC_TWIN": 15,
+        "ADG_IDX": 5
+    },
+    {
+        "DG": 1,
+        "SC": 15,
+        "Q": 2,
+        "SC_TWIN": 14,
+        "ADG_IDX": 5
+    },
+    {
+        "DG": 2,
+        "SC": 16,
+        "Q": 2,
+        "SC_TWIN": 10,
+        "ADG_IDX": 6
+    },
+    {
+        "DG": 2,
+        "SC": 10,
+        "Q": 2,
+        "SC_TWIN": 16,
+        "ADG_IDX": 6
+    },
+    {
+        "DG": 3,
+        "SC": 8,
+        "Q": 2,
+        "SC_TWIN": 9,
+        "ADG_IDX": 7
+    },
+    {
+        "DG": 3,
+        "SC": 9,
+        "Q": 2,
+        "SC_TWIN": 8,
+        "ADG_IDX": 7
+    },
+    {
+        "DG": 4,
+        "SC": 4,
+        "Q": 2,
+        "SC_TWIN": 3,
+        "ADG_IDX": 8
+    },
+    {
+        "DG": 4,
+        "SC": 3,
+        "Q": 2,
+        "SC_TWIN": 4,
+        "ADG_IDX": 8
+    },
+    {
+        "DG": 1,
+        "SC": 31,
+        "Q": 3,
+        "SC_TWIN": 32,
+        "ADG_IDX": 9
+    },
+    {
+        "DG": 1,
+        "SC": 32,
+        "Q": 3,
+        "SC_TWIN": 31,
+        "ADG_IDX": 9
+    },
+    {
+        "DG": 2,
+        "SC": 27,
+        "Q": 3,
+        "SC_TWIN": 26,
+        "ADG_IDX": 10
+    },
+    {
+        "DG": 2,
+        "SC": 26,
+        "Q": 3,
+        "SC_TWIN": 27,
+        "ADG_IDX": 10
+    },
+    {
+        "DG": 3,
+        "SC": 28,
+        "Q": 3,
+        "SC_TWIN": 22,
+        "ADG_IDX": 11
+    },
+    {
+        "DG": 3,
+        "SC": 22,
+        "Q": 3,
+        "SC_TWIN": 28,
+        "ADG_IDX": 11
+    },
+    {
+        "DG": 4,
+        "SC": 20,
+        "Q": 3,
+        "SC_TWIN": 21,
+        "ADG_IDX": 12
+    },
+    {
+        "DG": 4,
+        "SC": 21,
+        "Q": 3,
+        "SC_TWIN": 20,
+        "ADG_IDX": 12
+    },
+    {
+        "DG": 1,
+        "SC": 19,
+        "Q": 4,
+        "SC_TWIN": 18,
+        "ADG_IDX": 13
+    },
+    {
+        "DG": 1,
+        "SC": 18,
+        "Q": 4,
+        "SC_TWIN": 19,
+        "ADG_IDX": 13
+    },
+    {
+        "DG": 2,
+        "SC": 17,
+        "Q": 4,
+        "SC_TWIN": 23,
+        "ADG_IDX": 14
+    },
+    {
+        "DG": 2,
+        "SC": 23,
+        "Q": 4,
+        "SC_TWIN": 17,
+        "ADG_IDX": 14
+    },
+    {
+        "DG": 3,
+        "SC": 25,
+        "Q": 4,
+        "SC_TWIN": 24,
+        "ADG_IDX": 15
+    },
+    {
+        "DG": 3,
+        "SC": 24,
+        "Q": 4,
+        "SC_TWIN": 25,
+        "ADG_IDX": 15
+    },
+    {
+        "DG": 4,
+        "SC": 30,
+        "Q": 4,
+        "SC_TWIN": 29,
+        "ADG_IDX": 16
+    },
+    {
+        "DG": 4,
+        "SC": 29,
+        "Q": 4,
+        "SC_TWIN": 30,
+        "ADG_IDX": 16
+    }]

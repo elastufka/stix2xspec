@@ -6,6 +6,7 @@ import warnings
 from datetime import datetime as dt
 from datetime import timedelta as td
 from .triggergram import Triggergram
+from importlib import resources
 
 def pileup_corr_parameter():
     subc = construct_subcollimator()
@@ -15,8 +16,9 @@ def pileup_corr_parameter():
     prob_diff_pix = (2./big_pixel_fraction - 1.)/(2./big_pixel_fraction)
     return prob_diff_pix
         
-def livetime_fraction(triggergram, det_used, adg_file = '/Users/wheatley/Documents/Solar/STIX/stixpy/stixpy/processing/spectrogram/adg_table.json'):
-    adg_sc = pd.read_json(adg_file) #should probably by in STIX-CONF
+def livetime_fraction(triggergram, det_used, adg_file = 'adg_table.json'):
+    with resources.path('stix2xspec.data', adg_file) as aa:
+        adg_sc = pd.read_json(aa) #should probably be in STIX-CONF
     adg_sc.drop(0, inplace= True) # drop first row
     det_select = det_used + 1#np.arange(32) + 1
     ntrig = triggergram.triggerdata.shape[0]
