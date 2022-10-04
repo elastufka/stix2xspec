@@ -255,6 +255,7 @@ fig.update_layout(width=650, yaxis_range = [-1,5])
 fig.add_annotation(x=1.5,y=.5,text=fittext,xref='paper',yref='paper', showarrow = False)
 fig.show()
 ```
+{%include specfit_readme.html %}
 
 <!--
 ## Example - Convert STIX FITS file and background file independently
