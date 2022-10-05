@@ -191,7 +191,7 @@ def get_xspec_model_sigmas(model_component):
     return tuple([getattr(model_component,p).sigma for p in model_component.parameterNames])
         
 def show_model(model, df=False):
-    '''equivalant of pyxspec show() but in Markdown for Jupyter
+    '''Equivalant of pyxspec show() but in Markdown for Jupyter Notebooks, or easy copy-pasting. Return dataframe to display nicely in terminal or JupyterLab
     Input: xspec Model object'''
     mdtable="|Model par| Model comp | Component|  Parameter|  Unit |    Value| Sigma |\n |---|---|---|---|---|---| |\n"
     pdict={'Model par':[], 'Model comp':[], 'Component':[], 'Parameter': [], 'Unit': [], 'Value': [], 'Sigma':[]}
@@ -227,7 +227,7 @@ def show_model(model, df=False):
         return Markdown(mdtable)
     
 def show_error(model):
-    '''show parameters and errors. Input: xspec Model object'''
+    '''Show parameters and errors, if errors have been calculated. Input: xspec Model object'''
     
     tclout_errs={0:"new minimum found",1:"non-monotonicity detected",2:"minimization may have run into problem",3:"hit hard lower limit",4:"hit hard upper limit",5:"    parameter was frozen",6:"search failed in -ve direction",7:"search failed in +ve direction",8:"reduced chi-squared too high"}
 
@@ -256,7 +256,7 @@ def show_statistic(fit):
     return Markdown(f"Fit statistic: {fit.statMethod.capitalize()}   {fit.statistic:.3f} \n Null hypothesis probability of {fit.nullhyp:.2e} with {fit.dof} degrees of freedom")
 
 def plot_data(xspec,fitrange=False, dataGroup=1,erange=False,yrange=False, counts=False, title = None):
-    '''plot data in PlotLy. Input: xspec global object '''
+    '''Plot spectrum data in PlotLy, as either count rate (default) or counts. Input: xspec global object '''
 
     xspec.Plot.xAxis = "keV"
     #xspec.Plot('ufspec')
@@ -290,8 +290,19 @@ def plot_data(xspec,fitrange=False, dataGroup=1,erange=False,yrange=False, count
     return fig
 
 def plot_fit(xspec, model, fitrange=False, dataGroup=1,erange=False,yrange = [-3, 4], res_range=[-5,5],title=False,annotation=False, plotdata_dict = False, width = 500, height = 700):
-    '''plot data, fit, residuals in PlotLy. Input: xspec global object
-    Plot from dictionary of plot parameters if xspec = None, model = plotadata '''
+    '''Plot data, fit, residuals in PlotLy. Plot from dictionary of plot parameters if xspec = None, model = plotadata
+    
+    Input:
+        xspec: xspec global object or dict
+            Inputs to plot
+        
+        model: xspec Model object or None
+            Model data or None, if a previously-generated plotdata_dict is used as the input variable _xspec_
+    
+    Returns:
+    plotdata_dict: dict
+        The PlotLy plot data in a dictionary, to make tweaking the plot via update_layout, update_traces, update_axes, etc. later possible, since the Model object will overwrite itself eventually and be unable to plot via repeated calls to this function.
+     '''
     
     if xspec is not None:
         xspec.Plot.xAxis = "keV"

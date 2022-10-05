@@ -263,6 +263,21 @@ xspec.AllData.clear() # get rid of any data that is still loaded from previous r
 xspec.AllData(f"1:1 {'stx_spectrum_20220723_122031.fits'}{{1280}}") # fit the 1280th data row in the converted spectrogram file. make sure the .srm file is in the same folder as the spectrogram file.
 
 plot_data(xspec, erange = [4,50],title = f'STIX spectrum').show()
+```
+If desired, a time interval rather than a single row (time bin) of the spectrogram can be chosen for fitting. A new FITS file containing only one row must be generated.
+
+```python
+spectrum_from_time_interval(stx_spectrum_20220723_122031.fits, '2022-07-23T17:55:00', '2022-07-23T18:05:00', out_fitsname='stx_spectrum_integrated.fits')
+```
+Then load this data using the usual pyxspec commands.
+
+Fitting with a thermal and/or non-thermal solar model can easily be done with the following. Other commonly used models native to Xspec are:
+
+- [apec]() 
+- [powerlaw]()
+- [bknpower]()
+
+```python
 model, chisq = fit_thermal_nonthermal(xspec, thmodel = 'vth', ntmodel = 'bremsstrahlung_thick_target', lowErange = [3,10])
 ```
 
@@ -270,6 +285,22 @@ XSPEC will display fitted model parameters either in the terminal or directly in
 
 ```python
 show_model(model, df=True)
+```
+| Model par | Model comp | Component | Parameter | Unit | Value | Sigma |
+| :---: | :---: | :---: | --- |--- | --- | --- |
+|1 |1 | vth|EM| 1e49| 0.72 | frozen|
+|2 |1 | vth|kT| keV| 1.12 | ± 0.58|
+|3 |1 | vth|abund| | 1.00 | frozen| 
+|4 |1 | vth|norm| | 1.69e-03 | ± 9.34e-03|
+|5 |2 | bremsstrahlung_thick_target|p| | 4.86 | ± 802.12|
+|6 |2 | bremsstrahlung_thick_target|eebrk| keV| 14.90 | ± 3550.87|
+|7 |2 | bremsstrahlung_thick_target|q| | 3.60 | ± 129.90| 
+|8 |2 | bremsstrahlung_thick_target|eelow| keV| 7.68 | ± 4525.88| 
+|9 |2 | bremsstrahlung_thick_target|eehigh| keV| 1.00e+07 | ± 5.94e+11|
+|10 |2 | bremsstrahlung_thick_target|norm| | 0.15 | ± 334.75|
+
+
+```
 fig = plot_fit(xspec, model, fitrange = [3,30])
 fittext = annotate_plot(model, chisq=chisq, exclude_parameters = ['norm','Abundanc','Redshift'], MK=True)
 fig.update_layout(width=650, yaxis_range = [-1,5])
