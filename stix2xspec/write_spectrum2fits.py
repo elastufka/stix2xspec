@@ -25,7 +25,10 @@ def make_stix_header(spec, hdr = None, primary = False, respfile=None,extname=''
         hdr.set('REQUEST_ID', spec.request_id, "Unique Request ID for the Observation")
         hdr.set('SUN_DISTANCE', spec.distance, "Distance in AU to Sun")
         #hdr.set('GRID_FACTOR', fits_info_params.grid_factor, "Total Grid Transmission Factor", before='AUTHOR')
-        hdr.set('ELUT_FILENAME', spec.elut_filename, "Filename of ELUT")
+        elut_filename = spec.elut_filename
+        if '/' in spec.elut_filename:
+            elut_filename = spec.elut_filename[spec.elut_filename.rfind('/')+1:]
+        hdr.set('ELUT_FILENAME', elut_filename, "Filename of ELUT")
 
     hdr.set('DATE', dt.strftime(dt.now(),"%Y-%m-%dT%H:%M:%S"), 'File creation date (YYYY-MM-DDThh:mm:ss UTC)')
     hdr.set('ORIGIN', 'STIX','Spectrometer Telescope for Imaging X-rays')

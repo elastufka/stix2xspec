@@ -294,7 +294,7 @@ class Spectrogram:
             
         # Find corresponding ELUT
         if not elut_filename:
-            self.elut_filename = date2elut_file(self.hstart_str)
+            self.elut_filename = f"{os.environ['STX_CONF']}/elut/{date2elut_file(self.hstart_str)}"
         else:
             self.elut_filename = elut_filename
             
@@ -405,7 +405,11 @@ class Spectrogram:
         except AttributeError:
             self.eff_livetime_fraction = self._get_eff_livetime_fraction(expanded = False)
             ltarr = np.tile(self.eff_livetime_fraction, self.n_energies).reshape((self.n_energies,self.eff_livetime_fraction.size)).T
-        durarr = np.tile(self.t_axis.duration, self.n_energies).reshape((self.n_energies,self.duration.size)).T
+        durarr = np.tile(self.t_axis.duration, self.n_energies)
+        if 'background_subtracted' in self.history:
+            durarr = durarr.reshape((self.duration.size,self.n_energies))
+        else: #not sure why this is different tbh
+            durarr = durarr.reshape((self.n_energies,self.duration.size)).T
         rate = self.counts.squeeze()/(durarr * ltarr) #fdiv... replace denominator 0s with 1s (but there shouldn't be any zeros in duration or livetime fraction)
         try:
             rate_err = self.total_error.squeeze()/(durarr * ltarr) #fdiv... replace denominator 0s with 1s

@@ -65,7 +65,7 @@ def convert_spectrogram(fits_path_data, fits_path_bk = None, shift_duration = 0,
     
     else: #write background-corrected counts to fits
         fitsfilename = f"stx_spectrum_{spec.t_axis.time_mean[0] :%Y%m%d_%H%M%S}.fits"
-        print(f"spec.e_axis {spec.e_axis.energy_mean}")
+        #print(f"spec.e_axis {spec.e_axis.energy_mean}")
         spec.spectrum_to_fits(fitsfilename)
         return f"{os.getcwd()}/{fitsfilename}"
 
