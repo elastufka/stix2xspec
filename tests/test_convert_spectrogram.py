@@ -12,7 +12,7 @@ from stix2xspec.spectrogram_utils import *
 from stix2xspec.stix2xspec import *
 from stix2xspec.write_spectrum2fits import ogip_time_calcs
 from matplotlib import pyplot as plt
-from ml_utils import print_arr_stats
+from importlib import resources
 import pidly
 import os
 
@@ -170,7 +170,7 @@ def test_l1bg_apply_elut(**kwargs):
     
 def test_apply_elut(fitsfile, background = False, pixel=False, atol = 1e-4,energy_shift = 0, use_discriminators = True, replace_doubles = False, keep_short_bins = True, shift_duration = None, alpha = None, time_bin_filename = None):
     spec = Spectrogram(fitsfile, background = background)
-    spec.apply_elut(elut_filename = 'elut_table_20211209.csv')
+    spec.apply_elut(elut_filename = f"{os.environ['STX_CONF']}/elut/elut_table_20211209.csv")
 
     ## same in IDL
     #os.chdir('/Users/wheatley/Documents/Solar/STIX/code/STIX-GSW/')
@@ -278,7 +278,7 @@ def test_l1abg_correction(**kwargs):
     
 def test_correction(fitsfile, background = False, pixel=False, atol = 1e-4,energy_shift = 0, use_discriminators = True, replace_doubles = False, keep_short_bins = True, shift_duration = None, alpha = None, time_bin_filename = None):
     spec = Spectrogram(fitsfile, background = background)
-    spec.apply_elut(elut_filename = 'elut_table_20211209.csv')
+    spec.apply_elut(elut_filename = f"{os.environ['STX_CONF']}/elut/elut_table_20211209.csv")
     #if spec.alpha == 0:
     #    spec.data_level = 4
     spec.correct_counts()
@@ -400,7 +400,7 @@ def test_l1a_conversion(**kwargs):
 #    test_from_fits(l4_test)
     
 def test_conversion(fitsfile, bgfile, atol = 1e-4,energy_shift = 0, pixel=False, use_discriminators = True, replace_doubles = False, keep_short_bins = True, shift_duration = None, alpha = None, time_bin_filename = None):
-    rdict = convert_spectrogram(fitsfile, bgfile, elut_filename = 'elut_table_20211209.csv', testing = True)
+    rdict = convert_spectrogram(fitsfile, bgfile, elut_filename = f"{os.environ['STX_CONF']}/elut/elut_table_20211209.csv", testing = True)
     spec = rdict['spec']
     spec_bk = rdict['spec_bk']
     ## same in IDL
@@ -511,6 +511,48 @@ def test_ogip_time_calcs():
     spec_l1.correct_counts()
     timedict_l1 = ogip_time_calcs(spec_l1)
     print("L1 test passed successfully")
+
+def test_l1a_converted_file():
+    #with resources.path('stix2xspec.data','stx_spectrum_20220723_122031.fits') as pyf:
+    check_converted_files("/Users/wheatley/Documents/Solar/STIX/spectral_fitting/stx_spectrum_2208046494.fits", '/Users/wheatley/Documents/Solar/STIX/spectral_fitting/stx_spectrum_20220804_132655.fits')
+
+def test_l4_converted_file(**kwargs):
+    with resources.path('stix2xspec.data','stx_spectrum_20220723_122031.fits') as pyf:
+        check_converted_files("/Users/wheatley/Documents/Solar/STIX/spectral_fitting/stx_spectrum_2207238956.fits", str(pyf), atol = kwargs['atol'])
+        
+def compare_header_values(py,idl, idx=0, ignoreTrue=True):
+    for k in py[idx].header:
+        if k in idl[idx].header:
+            try:
+                ac = np.allclose(py[idx].header[k],idl[idx].header[k])
+                if not ignoreTrue or not ac:
+                    print(k,ac)
+            except TypeError:
+                if isinstance(py[idx].header[k],str):
+                    ac = py[idx].header[k] == idl[idx].header[k]
+                    if not ignoreTrue or not ac:
+                        print(k,ac)
+                else:
+                    print(k, py[idx].header[k], idl[idx].header[k])
+        
+def check_converted_files(idlconvert, pyconvert, atol = 1e-4):
+    with fits.open(pyconvert) as py, fits.open(idlconvert) as idl:
+        compare_header_values(py,idl)
+        compare_header_values(py,idl,idx=1)
+        for d in py[1].data.names[:-1]:
+            if d == 'TIME':
+                idltimes = [Time(Time(idl[1].header['TIMEZERO']+idl[1].header['MJDREF'], format='mjd').datetime + td(seconds = t)).mjd for t in idl[1].data.TIME]
+                assert_allclose(idltimes, py[1].data.TIME, atol=atol)
+            else:
+                assert_allclose(py[1].data[d], idl[1].data[d], atol=atol)
+        for d in py[2].data.names:
+            assert_allclose(py[2].data[d], idl[2].data[d], atol=atol)
+        for d in py[3].data.names[1:]:
+            #if 'TIME' in d:
+            #    idltimes = [Time(Time(idl[1].header['TIMEZERO']+idl[1].header['MJDREF'], format='mjd').datetime + td(seconds = t)).mjd for t in idl[3].data[d]]
+            #    assert_allclose(idltimes, py[3].data[d], atol=atol)
+            #else:
+            assert_allclose(py[3].data[d], idl[3].data[d], atol=atol)
 
 if __name__ == "__main__":
     test_l4_conversion()

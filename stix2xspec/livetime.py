@@ -8,13 +8,13 @@ from datetime import timedelta as td
 from .triggergram import Triggergram
 from importlib import resources
 
-def pileup_corr_parameter():
-    subc = construct_subcollimator()
-    pixel_areas = subc.det.pixel.area
-    detector_area = (subc.det.area)[0]
-    big_pixel_fraction = pixel_areas[0]/detector_area
-    prob_diff_pix = (2./big_pixel_fraction - 1.)/(2./big_pixel_fraction)
-    return prob_diff_pix
+#def pileup_corr_parameter():
+#    subc = construct_subcollimator()
+#    pixel_areas = subc.det.pixel.area
+#    detector_area = (subc.det.area)[0]
+#    big_pixel_fraction = pixel_areas[0]/detector_area
+#    prob_diff_pix = (2./big_pixel_fraction - 1.)/(2./big_pixel_fraction)
+#    return prob_diff_pix
         
 def livetime_fraction(triggergram, det_used, adg_file = 'adg_table.json'):
     with resources.path('stix2xspec.data', adg_file) as aa:

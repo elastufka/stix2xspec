@@ -81,6 +81,18 @@ def spectrum_from_time_interval(original_fitsfile, start_time, end_time, out_fit
     if not out_fitsname:
         out_fitsname=f"{original_fitsfile[:-5]}_{pd.to_datetime(start_time):%H%M%S}-{pd.to_datetime(end_time):%H%M%S}.fits"
     hdul.writeto(out_fitsname)
+    
+def fits_time_to_datetime(fitsfile, idx = None):
+    """Return a datetime axis or single datetime given an OGIP-format FITS file"""
+    with fits.open(fitsfile) as f:
+        time_bin_center = f[1].data.TIME
+        if Time(time_bin_center[0], format='mjd').datetime.year < 2020 or Time(time_bin_center[0], format='mjd').datetime.year > dt.now().year:
+            tt = Time([Time(f[1].header['TIMEZERO']+f[1].header['MJDREF'], format='mjd').datetime + td(seconds = t) for t in time_bin_center])
+        else:
+            tt = Time(time_bin_center, format = 'mjd')
+    if idx:
+        return tt.datetime[idx]
+    return tt.datetime
 
 #def select_background_interval():
 

@@ -172,10 +172,12 @@ This software requires the files stored in [STIX-CONF](https://github.com/i4Ds/S
 These files can also be found in the [IDL ground software](https://github.com/i4Ds/STIX-GSW) _dbase_ directory.  
 
 ```bash
-export STX_CONF="/path/to/STIX-CONF"
+export STX_CONF=/path/to/STIX-CONF
 ```
 
 ## Example - Background-subtract and convert a STIX FITS file 
+
+### [Try it out in CoLab](https://colab.research.google.com/drive/1bXTpKqWAwyp92lM9alSqrAPZtRw2ocMT?usp=sharing)
 
 Download a FITS file from the [STIX Data Center (SDC)](https://datacenter.stix.i4ds.net/). More details about STIX data products, along with tutorials, can be found on the [STIX wiki](https://datacenter.stix.i4ds.net/wiki/index.php?title=STIX_Data_Products). Official science data products are level 1 (L1). These can be found on the [STIX archive server](http://dataarchive.stix.i4ds.net/data/fits/). 
 
@@ -198,7 +200,7 @@ outfile = convert_spectrogram(fitsfile, bgfile, to_fits = True)
 **Figure 1**: A portion of the converted spectrogram
 
 
-![](spectrogram_readme.png)
+![](spectrogram_idl_readme.png)
 
 **Figure 2**: The same portion of the same input and background files, converted using the official IDL STIX ground software (_convert_spectrogram.pro_)
 
@@ -242,8 +244,9 @@ This requires additional installation of  [sunpy/sunxspex](https://github.com/su
 Be sure to enable XSPEC via command line before starting a Python session.
 
 ```bash
-
+. $HEADAS/headas-init.sh
 ```
+
 Add the thermal bremsstrahlung model _vth_ and the non-thermal thick-target bremsstrahlung model _bremsstrahlung_thick_target_ to XSPEC, then fit them first individually and then together.
 
 ```python 
@@ -260,10 +263,13 @@ xspec.AllModels.addPyMod(mod_nt.model, mod_nt.ParInfo, 'add')
 mod_nt.print_ParInfo() # see the initial configuration of parameters
 
 xspec.AllData.clear() # get rid of any data that is still loaded from previous runs
-xspec.AllData(f"1:1 {'stx_spectrum_20220723_122031.fits'}{{1280}}") # fit the 1280th data row in the converted spectrogram file. make sure the .srm file is in the same folder as the spectrogram file.
+xspec.AllData(f"1:1 {'stx_spectrum_20220723_122031.fits'}{{1140}}") # fit the 1140th data row in the converted spectrogram file. make sure the .srm file is in the same folder as the spectrogram file.
 
-plot_data(xspec, erange = [4,50],title = f'STIX spectrum').show()
+spectime = fits_time_to_datetime('stx_spectrum_20220723_122031.fits', idx=1140)
+plot_data(xspec, erange = [4,50],title = f'STIX spectrum at {spectime:%Y-%m-%d %H:%M:%S}').show()
 ```
+![](spectrum_readme.png)
+
 If desired, a time interval rather than a single row (time bin) of the spectrogram can be chosen for fitting. A new FITS file containing only one row must be generated.
 
 ```python
@@ -288,22 +294,21 @@ show_model(model, df=True)
 ```
 | Model par | Model comp | Component | Parameter | Unit | Value | Sigma |
 | :---: | :---: | :---: | --- |--- | --- | --- |
-|1 |1 | vth|EM| 1e49| 0.72 | frozen|
-|2 |1 | vth|kT| keV| 1.12 | ± 0.58|
+|1 |1 | vth|EM| 1e49| 0.30 | frozen| 
+|2 |1 | vth|kT| keV| 1.88 | ± 0.26| 
 |3 |1 | vth|abund| | 1.00 | frozen| 
-|4 |1 | vth|norm| | 1.69e-03 | ± 9.34e-03|
-|5 |2 | bremsstrahlung_thick_target|p| | 4.86 | ± 802.12|
-|6 |2 | bremsstrahlung_thick_target|eebrk| keV| 14.90 | ± 3550.87|
-|7 |2 | bremsstrahlung_thick_target|q| | 3.60 | ± 129.90| 
-|8 |2 | bremsstrahlung_thick_target|eelow| keV| 7.68 | ± 4525.88| 
-|9 |2 | bremsstrahlung_thick_target|eehigh| keV| 1.00e+07 | ± 5.94e+11|
-|10 |2 | bremsstrahlung_thick_target|norm| | 0.15 | ± 334.75|
-
+|4 |1 | vth|norm| | 1.86e-03 | ± 7.77e-04| 
+|5 |2 | bremsstrahlung_thick_target|p| | 2.65 | ± 346.01| 
+|6 |2 | bremsstrahlung_thick_target|eebrk| keV| 16.93 | ± 421.75| 
+|7 |2 | bremsstrahlung_thick_target|q| | 6.64 | ± 71.89| 
+|8 |2 | bremsstrahlung_thick_target|eelow| keV| 10.43 | ± 176.56| 
+|9 |2 | bremsstrahlung_thick_target|eehigh| keV| 1.00e+07 | ± 3.39e+09| 
+|10 |2 | bremsstrahlung_thick_target|norm| | 0.57 | ± 11.83|
 
 ```
 fig = plot_fit(xspec, model, fitrange = [3,30])
 fittext = annotate_plot(model, chisq=chisq, exclude_parameters = ['norm','Abundanc','Redshift'], MK=True)
-fig.update_layout(width=650, yaxis_range = [-1,5])
+fig.update_layout(width=650, yaxis_range = [-2,3])
 fig.add_annotation(x=1.75,y=.5,text=fittext,xref='paper',yref='paper', showarrow = False)
 fig.show()
 ```
