@@ -27,14 +27,14 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 #from https://github.com/cherrypy/cheroot/blob/main/docs/conf.py
 master_doc = 'index'
 
-apidoc_excluded_paths = ['stix2xspec/data']
+apidoc_excluded_paths = ['data']
 #apidoc_extra_args = [
 #    '--implicit-namespaces',
 #    '--private',  # include “_private” modules
 #]
 apidoc_module_dir = '../stix2xspec'
 apidoc_module_first = False
-#apidoc_output_dir = 'pkg'
+#apidoc_output_dir = 'api'
 apidoc_separate_modules = True
 apidoc_toc_file = None
 
