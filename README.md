@@ -279,9 +279,9 @@ Then load this data using the usual pyxspec commands.
 
 Fitting with a thermal and/or non-thermal solar model can easily be done with the following. Other commonly used models native to Xspec are:
 
-- [apec]() 
-- [powerlaw]()
-- [bknpower]()
+- [apec](https://heasarc.gsfc.nasa.gov/xanadu/xspec/manual/node134.html) 
+- [powerlaw](https://heasarc.gsfc.nasa.gov/xanadu/xspec/manual/node216.html)
+- [bknpower](https://heasarc.gsfc.nasa.gov/xanadu/xspec/manual/node142.html)
 
 ```python
 model, chisq = fit_thermal_nonthermal(xspec, thmodel = 'vth', ntmodel = 'bremsstrahlung_thick_target', lowErange = [3,10])
