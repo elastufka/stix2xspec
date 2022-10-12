@@ -16,7 +16,8 @@ release = '0.1.0-alpha'
 import sys
 import os
 sys.path.insert(0, os.path.abspath("../"))
-sys.path.insert(0, os.path.abspath("../stix2xspec"))
+sys.path.insert(0, os.path.abspath("../.."))
+#sys.path.insert(0, os.path.abspath("../stix2xspec"))
 
 extensions = ['sphinx.ext.duration', 'sphinx.ext.autodoc', 'sphinx.ext.napoleon', 'sphinx.ext.autosummary', 'myst_parser']
 
