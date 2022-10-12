@@ -11,7 +11,17 @@ from astropy.time import Time
 #from .spectrogram_axes import stx_energy_axis, stx_time_axis
 
 def make_stix_header(spec, hdr = None, primary = False, respfile=None,extname=''):
-    """make the primary headers"""
+    """Make the primary header and default headers for all HDUs.
+    
+    Args:
+        spec (stix2xspec.Spectrogram): Input spectrogram to make FITS headers for.
+        hdr (astropy.header, optional): Defaults to None. Input header to modify.
+        primary (bool, optional): Defaults to False. True if the desired header is the primary header.
+        respfile (str, optional): Response file name.
+        extname (str, optional): Defaults to empty string. Name of the FITS extension.
+    
+    Returns:
+        astropy.header: FITS header."""
     if not hdr:
         hdu = fits.PrimaryHDU()
         hdr = hdu.header
@@ -76,7 +86,14 @@ def make_stix_header(spec, hdr = None, primary = False, respfile=None,extname=''
     return hdr
 
 def make_rate_header(rate_header,spec,respfile=None):
-    """stx_rate_header.pro"""
+    """Make the header for the Rate HDU. Translation of _stx_rate_header.pro_.
+    Args:
+        rate_header (astropy.header): Default header for the Rate HDU.
+        spec (stix2xspec.Spectrogram): Input spectrogram to make FITS headers for.
+        respfile (str, optional): Defaults to None. Response file name.
+    
+    Returns:
+        astropy.header: FITS header."""
     hdr = make_stix_header(spec, hdr=rate_header, respfile=respfile, extname='RATE')
 
     hdr.set('TIMEREF','LOCAL','Reference frame for the times')
@@ -129,6 +146,13 @@ def make_rate_header(rate_header,spec,respfile=None):
     return hdr
 
 def ogip_time_calcs(spec):
+    """ Calculate time parameters to be written into the FITS file.
+    
+    Args:
+        spec (stix2xspec.Spectrogram): Input spectrogram to make FITS headers for.
+    
+    Returns:
+        dict: Dictionary containing the calculated values."""
 #    ;calculate time parameters to be passed into the fits file
 #    specnum = indgen( n_elements( ut[0,*] ) ) + 1
 #    channel = rebin( lindgen( nchan ), nchan, n_elements( ut[0,*] ) )

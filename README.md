@@ -195,12 +195,12 @@ bgfile = 'solo_L1A_stix-sci-xray-l1-2207235029_20220723T113947-20220723T122747_0
 outfile = convert_spectrogram(fitsfile, bgfile, to_fits = True)
 ```
 
-![](spectrogram_readme.png)
+![](https://github.com/elastufka/stix2xspec/blob/main/spectrogram_readme.png?raw=true)
 
 **Figure 1**: A portion of the converted spectrogram
 
 
-![](spectrogram_idl_readme.png)
+![](https://github.com/elastufka/stix2xspec/blob/main/spectrogram_idl_readme.png?raw=true)
 
 **Figure 2**: The same portion of the same input and background files, converted using the official IDL STIX ground software (_convert_spectrogram.pro_)
 
@@ -268,7 +268,7 @@ xspec.AllData(f"1:1 {'stx_spectrum_20220723_122031.fits'}{{1140}}") # fit the 11
 spectime = fits_time_to_datetime('stx_spectrum_20220723_122031.fits', idx=1140)
 plot_data(xspec, erange = [4,50],title = f'STIX spectrum at {spectime:%Y-%m-%d %H:%M:%S}').show()
 ```
-![](spectrum_readme.png)
+![](https://github.com/elastufka/stix2xspec/blob/main/spectrum_readme.png?raw=true)
 
 If desired, a time interval rather than a single row (time bin) of the spectrogram can be chosen for fitting. A new FITS file containing only one row must be generated.
 
@@ -312,7 +312,7 @@ fig.update_layout(width=650, yaxis_range = [-2,3])
 fig.add_annotation(x=1.75,y=.5,text=fittext,xref='paper',yref='paper', showarrow = False)
 fig.show()
 ```
-![](specfit_readme.png)
+<img src="https://github.com/elastufka/stix2xspec/blob/main/specfit_readme.png?raw=true">
 
 <!--
 ## Example - Convert STIX FITS file and background file independently

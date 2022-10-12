@@ -12,7 +12,14 @@ from datetime import timedelta as td
 
 
 def date2elut_file(date, stx_conf = None):
-    """Find the ELUT table to be applied, given the date of the observation. ELUT tables are available in STIX-CONF https://github.com/i4Ds/STIX-CONF"""
+    """Find the ELUT table to be applied, given the date of the observation. ELUT tables are available in STIX-CONF https://github.com/i4Ds/STIX-CONF
+    
+    Args:
+        date (str, datetime.datetime): Date for which to find ELUT file.
+        stx_conf (str, optional): Path to ELUT files. Defaults to None. If not set, the program will look for an environment variable STX_CONF which points to the correct location of the files mentioned above.
+        
+    Returns:
+        str: ELUT filename"""
     
     if not stx_conf:
         stx_conf = os.environ['STX_CONF']
@@ -27,8 +34,18 @@ def date2elut_file(date, stx_conf = None):
     elut_filename = elut_df.query("@date > start_date and @date <= end_date")[' elut_file'].iloc[0]# elut filename that applies to desired date
     return elut_filename
 
-def read_elut(elut_filename = None, scale1024 = True, ekev_actual = True):
-    """ This function finds the most recent ELUT csv file, reads it, and returns the gain and offset used to make it along with the edges of the Edges in keV (Exact) and ADC 4096, rounded """
+def read_elut(elut_filename = None, scl = 4.0, ekev_actual = True):
+    """ This function finds the most recent ELUT csv file, reads it, and returns the gain and offset used to make it along with the edges of the Edges in keV (Exact) and ADC 4096, rounded. Translation of _stx_read_elut.pro_.
+    
+    Args:
+        elut_filname (str, optional): Name of the ELUT file to use. Defaults to None, in which case the most recent ELUT file will be used.
+        scl (float, optional): Default 4.0. Otherwise should be set to 1. Scale factor for offset.
+        ekev_actual (bool, optional): Return channel edges with true energies based on full adc 4096 bins
+        
+    Returns:
+        gain (np.array):
+        offset (np.array):
+        adc_4096_dict (dict):"""
     stx_conf = os.environ['STX_CONF']
     if not elut_filename:
         elut_filename = sorted(glob.glob(f"{stx_conf}/elut/elut_table*.csv"), key=os.path.getmtime)[-1] #most recent ELUT
@@ -36,10 +53,10 @@ def read_elut(elut_filename = None, scale1024 = True, ekev_actual = True):
         
     elut = pd.read_csv(elut_filename, header = 2)
         
-    if scale1024:
-        scl = 4.0
-    else:
-        scl = 1.0
+#    if scale1024:
+#        scl = 4.0
+#    else:
+#        scl = 1.0
         
     offset = (elut.Offset.values / scl).reshape((32,12))
     gain = (elut["Gain keV/ADC"].values * scl).reshape((32,12))
@@ -65,7 +82,14 @@ def read_elut(elut_filename = None, scale1024 = True, ekev_actual = True):
         return gain, offset, adc4096_dict
 
 def get_header_corrections(fits_path):
-    """Returns distance from the Sun and time shift from primary header information"""
+    """Returns distance from the Sun and time shift from primary header information.
+    
+    Args:
+        fits_path (str): Full path to FITS file
+        
+    Returns:
+         tuple : Distance from the Sun in AU, time shift in seconds between spacecraft and Earth time.
+        """
     primary_header =fits.open(fits_path)[0].header
     au = constants.au.value # Already in meters
     distance_sun_m = primary_header['DSUN_OBS']
@@ -73,9 +97,17 @@ def get_header_corrections(fits_path):
     time_shift = primary_header['EAR_TDEL']
     return distance, time_shift
     
-def open_spec_fits(filename):
-    """Open a L1, L1A, or L4 FITS file and return the HDUs"""
-    with fits.open(filename) as hdul:#when to close this?
+def open_spec_fits(fits_path):
+    """Open a L1, L1A, or L4 FITS file and return the HDUs
+    
+    Args:
+        fits_path (str): Full path to FITS file
+        
+    Returns:
+        tuple : astropy Primary HDU header, control HDU, data HDU, energy HDU
+    
+    """
+    with fits.open(fits_path) as hdul:
         primary_header = hdul[0].header.copy()
         control = hdul[1].copy()
         data = hdul[2].copy()
@@ -83,7 +115,13 @@ def open_spec_fits(filename):
     return primary_header, control, data, energy
     
 def get_hstart_time(primary_header):
-    """Return the observation start time in both string and datetime format"""
+    """Return the observation start time in both string and datetime format
+    
+    Args:
+        primary_header (astropy.header): Header to get observation start time from.
+        
+    Returns:
+        tuple: Observation start time as string, observation start time as datetime"""
     try:
         hstart_str = primary_header['DATE_BEG']
     except KeyError:
@@ -92,7 +130,13 @@ def get_hstart_time(primary_header):
     return hstart_str, hstart_time
     
 def get_use_detectors(det_ind = None):
-    """Get a mask of detectors used in observation"""
+    """Get a mask of detectors used in observation.
+    
+    Args:
+        det_ind (list, optional): Defaults to None, in which case all 32 detectors are used. List of detectors to use.
+    
+    Returns:
+        np.array: A mask of the detectors in use."""
     g10=np.array([3,20,22])-1
     g09=np.array([16,14,32])-1
     g08=np.array([21,26,4])-1
@@ -114,7 +158,13 @@ def get_use_detectors(det_ind = None):
     return mask_use_detectors
     
 def get_use_pixels(pix_ind = None):
-    """Get a mask of detector pixels used in observation"""
+    """Get a mask of detector pixels used in observation.
+    
+    Args:
+        pix_ind (list, optional): Defaults to None, in which case all 12 pixels are used. List of pixels to use.
+      
+    Returns:
+        np.array: A mask of the pixels in use."""
     if not pix_ind:
         return np.ones(12)
     elif isinstance(pix_ind, list):
@@ -123,7 +173,13 @@ def get_use_pixels(pix_ind = None):
         return mask_use_pixels
 
 def edge_products(edges):
-    """Functions like https://hesperia.gsfc.nasa.gov/ssw/gen/idl/spectra/edge_products.pro . Froms a vector of contiguous channel boundaries and returns the commonly used quantities for plotting and scaling: mean, geometric mean, width, array of n+1 edges of contiguous channels, 2xn array of edges"""
+    """Functions like [sswidl's edge_products](https://hesperia.gsfc.nasa.gov/ssw/gen/idl/spectra/edge_products.pro). Forms a vector of contiguous channel boundaries and returns the commonly used quantities for plotting and scaling: mean, geometric mean, width, array of n+1 edges of contiguous channels, 2xn array of edges
+    
+    Args:
+        edges (np.array): A 1- or 2-D array of the edges to use.
+        
+    Returns:
+        tuple: mean of edges, geometric mean of edges, width of bins between edges, lower edges, 2-D array of all edges"""
     if edges.size == 1:
         return edges
     dims = edges.shape
@@ -146,7 +202,15 @@ def edge_products(edges):
     return out_mean, gmean, width, edges_1, edges_2
 
 def shift_one_timestep(arr_in, axis = 0, shift_step = -1):
-    """Shift an array along a given axis a given number of steps. Primarily used to shift time axis by one step"""
+    """Shift an array along a given axis a given number of steps. Primarily used to shift time axis by one step.
+    
+    Args:
+        arr_in (np.array): Input array
+        axis (int, optional): Axis to shift along. Defaults to 0.
+        shift_step(int, optional): Step to roll the array by. Defaults to -1.
+        
+    Returns:
+        np.array: Array shifted by _shift_step_ along _axis_."""
     if shift_step == 0:
         return arr_in
     shifted_arr = np.copy(arr_in)
@@ -156,8 +220,17 @@ def shift_one_timestep(arr_in, axis = 0, shift_step = -1):
     else:
         return shifted_arr[shift_step:]
     
-def write_cropped_srm(srm,keep_channels,fitsfilename=None, request_id = None, energy_shift = None):
-    """Write a SRM FITS file with only the channels relevant to the observation retained"""
+def write_cropped_srm(srm,keep_channels,fitsfilename=None, request_id = None):
+    """Write a SRM FITS file with only the channels relevant to the observation retained. A shortcut to generating the full SRM, used because the STIX SRM is relatively stable.
+    
+    Args:
+        srm (astropy.BinTableHDU): Input spectral response matrix from FITS file.
+        keep_channels (list): List of indices of energy channels to keep.
+        fitsfilename (str, optional): Defaults to None. Name of output SRM FITS file.
+        request_id (int or str, optional): Request ID associated with observation, to help in creating default filename.
+        
+    Returns:
+        str: Full path and filename of written FITS file."""
     matrix_names = ['ENERG_LO','ENERG_HI','N_GRP','F_CHAN','N_CHAN','MATRIX']
     #print(f"original shapes: {srm[1].data.MATRIX.shape}")
     matrix = srm[1].data
@@ -165,7 +238,7 @@ def write_cropped_srm(srm,keep_channels,fitsfilename=None, request_id = None, en
     
     #re-write primary header ENERGY_L and _H in case the energy changed
     new_nchan = np.zeros(matrix.F_CHAN.size) + len(keep_channels)
-    print("NEW_NCHAN",new_nchan[0])
+    #print("NEW_NCHAN",new_nchan[0])
     new_matrix = matrix.MATRIX[:,keep_channels] #can't do this have to make new ones
     
     matrix_table = Table([matrix.ENERG_LO, matrix.ENERG_HI, matrix.N_GRP, matrix.F_CHAN, new_nchan.astype('>i4'), new_matrix.astype('>f4')], names = matrix_names)
@@ -176,9 +249,9 @@ def write_cropped_srm(srm,keep_channels,fitsfilename=None, request_id = None, en
     #print(new_channel)
     new_emin = ebounds.E_MIN[keep_channels]
     new_emax = ebounds.E_MAX[keep_channels]
-    if energy_shift: #apply energy shift
-        new_emin += energy_shift
-        new_emax += energy_shift
+#    if energy_shift: #apply energy shift #this actually shouldn't happen to the SRM, was an error in the original code
+#        new_emin += energy_shift
+#        new_emax += energy_shift
 
     ebounds_table = Table([new_channel.astype('>i4'), new_emin.astype('>f4'), new_emax.astype('>f4')], names = ebounds_names)
 
