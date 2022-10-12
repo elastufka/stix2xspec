@@ -11,7 +11,13 @@ from astropy.time import Time
 from astropy.table import Table
 
 def spectrum_from_time_interval(original_fitsfile, start_time, end_time, out_fitsname=None):
-    """write average count rate over selected time interval to new fitsfile for fitting with XSPEC"""
+    """Write average count rate over selected time interval to new FITS file for fitting with XSPEC.
+    
+    Args:
+        original_fitsfile (str): Name of FITS file from which to get the spectrum.
+        start_time (str, datetime, int, float): Start time in format readable by astropy.Time.
+        end_time (str, datetime, int, float): End time in format readable by astropy.Time.
+        out_fitsname (str): Name of output FITS file. Defaults to None."""
     reference_fits = fits.open(original_fitsfile)
     primary_HDU = reference_fits[0] #header = reference_fits[0].header.copy()
     rate_header = reference_fits[1].header.copy()
@@ -83,7 +89,14 @@ def spectrum_from_time_interval(original_fitsfile, start_time, end_time, out_fit
     hdul.writeto(out_fitsname)
     
 def fits_time_to_datetime(fitsfile, idx = None):
-    """Return a datetime axis or single datetime given an OGIP-format FITS file"""
+    """Return a datetime axis or single datetime given an OGIP-format FITS file.
+    
+    Args:
+        fitsfile (str): Name of FITS file.
+        idx (int, optional): Index at which to return datetime. Defaults to None.
+        
+    Returns:
+        np.array: Array of datetimes, or single datetime if idx is not None."""
     with fits.open(fitsfile) as f:
         time_bin_center = f[1].data.TIME
         if Time(time_bin_center[0], format='mjd').datetime.year < 2020 or Time(time_bin_center[0], format='mjd').datetime.year > dt.now().year:
@@ -98,10 +111,30 @@ def fits_time_to_datetime(fitsfile, idx = None):
 
 def fit_thermal_nonthermal(xspec, thmodel = 'apec', ntmodel = 'bknpower', lowErange = [2.0,10.0], highErange = [8.0,30.0], breakEstart = 15, breakEfrozen=False, minCounts=10, statMethod='chi',query='no',renorm=True,nIterations = 1000,renotice = True):
     '''Fit thermal and non-thermal components to spectrum via the following steps:
-        1) fit thermal over low energy
-        2) fit non-thermal over high-energy with initial break energy frozen (if non-thermal model is bknpow or thick2)
-            2a) unfreeze break energy and fit non-thermal again
-        3) fit thermal and non-thermal together over entire energy range'''
+    
+    1) fit thermal over low energy
+    2) fit non-thermal over high-energy with initial break energy frozen (if non-thermal model is bknpow or thick2)
+        2a) unfreeze break energy and fit non-thermal again
+    3) fit thermal and non-thermal together over entire energy range
+    
+    Args:
+        xspec
+        thmodel (str, optional): Defaults to 'apec'. Thermal model to use.
+        ntmodel (str, optional): Defaults to 'bknpower'. Non-thermal model to use. Can also be set to None, in which case only a thermal model will be fit to the data.
+        lowErange (list or tuple, optional): Defaults to [2.0,10.0].
+        highErange (list or tuple, optional): Defaults to [8.0,30.0]
+        breakEstart (float, optional): Defaults to 15. Energy at which to
+        breakEfrozen (bool, optional): Defaults to False. Freeze the break energy parameter or not.
+        minCounts (int, optional): Defaults to 10. Not yet implemented.
+        statMethod (str, optional): Defaults to 'chi'. Statistics to be used.
+        query (str, optional): Defaults to 'no'. Whether to query the user for further iterations once max iterations are reached.
+        renorm (bool, optional): Defaults to True. Whether to re-normalize the data or not.
+        nIterations (int, optional): Defaults to 1000. Number of iterations before querying for more or stopping.
+        renotice (bool, optional): Defaults to True. Whether to notice all the channels after the fit is complete (for plotting purposes mainly) or not.
+        
+    Returns:
+        tuple: model, chisq
+    '''
     breakE = True #assume there's a break energy
     xspec.Xset.abund="felc"
     if ntmodel != 'thick2':

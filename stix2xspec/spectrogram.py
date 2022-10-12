@@ -16,7 +16,18 @@ from matplotlib import pyplot as plt
 
 class Spectrogram:
     def __init__(self, filename, background = False, use_discriminators = True, replace_doubles = False, keep_short_bins = True, shift_duration = None, time_bin_filename = None, det_ind = None, pix_ind = None):
-        """For L4 files, need to specify that alpha = 0"""
+        """Read in a STIX spectrogram or pixel data from a FITS file. .
+        
+        Args:
+            filename (str): Full path to input FITS file.
+            background (bool, optional): Defaults to False. Set to True if the input file should be used as a background file.
+            use_discriminators (bool, optional): Defaults to True. Most often should be set to False if the file is a background file.
+            replace_doubles (bool, optional): Defaults to False.
+            keep_short_bins (bool, optional): Defaults to True. Otherwise discards time bins shorter than a minimum value.
+            shift_duration (int, optional): Defaults to 0. Shift all time bins by 1 to account for FSW time input discrepancy prior to 09-Dec-2021. N.B. WILL ONLY WORK WITH FULL TIME RESOLUTION DATA WHICH IS OFTEN NOT THE CASE FOR PIXEL DATA.
+            time_bin_filename (str, optional): Full path to time bin file. Not yet implemented.
+            det_ind (list, optional): Defaults to None. Otherwise, list of detectors used.
+            pix_ind (list, optional): Defaults to None. Otherwise, list of pixels used."""
         self.filename = filename
         if 'spectrogram' in filename: #this isn't a sure thing but if it's from the SDC it will be in the filename
             self._alpha = 0
@@ -30,18 +41,22 @@ class Spectrogram:
     #attributes that are important to be read-only
     @property
     def data_level(self):
+        """The data level of the input FITS file."""
         return self._data_level
     
     @property
     def alpha(self):
+        """1 if the input FITS file is a L1A file."""
         return self._alpha
         
     def _alpha_from_header(self, primary_header):
+        """Reads the processing level from the FITS header to determine if alpha is 1 or 0."""
         processing_level = primary_header['LEVEL']
         alpha = 1 if processing_level.strip() == 'L1A' else 0
         self._alpha = alpha
         
     def _remove_short_bins(self, hstart_str, replace_doubles = False):
+        """Remove time bins shorter than a minimum time specified in STIX-CONF/detector/min_time_index.csv."""
         counts_for_time_bin = sum(self.counts[1:10,:],1) # shape is ex. (32,)
         idx_short = np.where(counts_for_time_bin >= 1400)[0]
 
@@ -76,6 +91,7 @@ class Spectrogram:
         self.triggers_err = self.triggers_err[idx_long]
         
     def _get_energy_edges(self, energy, energies_used, energy_shift):
+        """Get the energy edges, mean, geometric mean, width, etc given the energy HDU, energies used specified by the energy bin mask, and any energy shift that was applied."""
         energy_edges_2 = np.transpose([[energy.data.e_low[energies_used]], [energy.data.e_high[energies_used]]])
         _, _, _, energy_edges_1, _ = edge_products(energy_edges_2.squeeze())
         
@@ -89,6 +105,7 @@ class Spectrogram:
         return use_energies, out_mean, out_gmean, width, edges_1, edges_2
         
     def _get_used_indices(self):
+        """Get the indices of which pixels and detectors were used in the observation."""
         if self.alpha and not self.background: #pixel data - but don't use on L4 background data!
             mask_use_detectors = get_use_detectors(self.det_ind)
             mask_use_pixels = get_use_pixels(self.pix_ind)
@@ -106,6 +123,7 @@ class Spectrogram:
         return pixels_used, detectors_used
         
     def _get_eff_ewidth(self, pixels_used, detectors_used):
+        """Use the ELUT to get the effective energy width."""
         energy_edges_used = np.append(self.e_axis.low_fsw_idx,self.e_axis.high_fsw_idx[-1]+1)
         gain, offset, adc, ekev_actual = read_elut(elut_filename = self.elut_filename)
         self.ekev_actual = ekev_actual #for testing
@@ -118,30 +136,16 @@ class Spectrogram:
         self.eff_ewidth = eff_ewidth
         
     def _from_fits(self, use_discriminators = True, replace_doubles = False, keep_short_bins = True, shift_duration = None, time_bin_filename = None):
-        """Read spectrogram FITS file. Same function as stx_read_spectrogram_fits_file and stx_read_pixel_data_fits_file
+        """Read spectrogram FITS file. Same function as *stx_read_spectrogram_fits_file.pro* and *stx_read_pixel_data_fits_file.pro*
         
-        args:
+        Args:
         
-        fits_path_data : str
-        The path to the sci-xray-spec (or sci-spectrogram) observation file
-        
-        kwargs:
-        
-        background : bool, default = False
-        Is the input file a background file or not
-        
-        energy_shift : optional, float, default=0.
-        Shift all energies by this value in keV. Rarely needed only for cases where there is a significant shift in calibration before a new ELUT can be uploaded.
-        
-        alpha : bool, default=0
-        Set if input file is an alpha e.g. L1A
-        
-        use_discriminators : bool, default=False
-        an output float value
-
-        shift_duration : None
-        Shift all time bins by 1 to account for FSW time input discrepancy prior to 09-Dec-2021. N.B. WILL ONLY WORK WITH FULL TIME RESOLUTION DATA WHICH IS USUALLY NOT THE CASE FOR SPECTROGRAM DATA.
-         """
+            fits_path_data (str): The path to the sci-xray-spec (or sci-spectrogram) observation file
+            use_discriminators (bool, optional): Defaults to True. Most often should be set to False if the file is a background file.
+            replace_doubles (bool, optional): Defaults to False.
+            keep_short_bins (bool, optional): Defaults to True. Otherwise discards time bins shorter than a minimum value.
+            shift_duration (int, optional): Defaults to 0. Shift all time bins by 1 to account for FSW time input discrepancy prior to 09-Dec-2021. N.B. WILL ONLY WORK WITH FULL TIME RESOLUTION DATA WHICH IS OFTEN NOT THE CASE FOR PIXEL DATA.
+            time_bin_filename (str, optional): Full path to time bin file. Not yet implemented."""
         short_bins_dt = dt.strptime('2020-11-25T00:00:00',"%Y-%m-%dT%H:%M:%S")
         shift_duration_dt = dt.strptime('2021-12-09T00:00:00',"%Y-%m-%dT%H:%M:%S")
         energy_shift_low_dt = dt.strptime('2020-11-15T00:00:00',"%Y-%m-%dT%H:%M:%S")
@@ -290,7 +294,13 @@ class Spectrogram:
         self.request_id = control.data.request_id[0]
         
     def apply_elut(self, elut_filename = None, n_energies = None):
-        """All the stuff that happens after stx_read_..._fits_file and before stx_convert_science_data2ospex. """
+        """Apply the ELUT to the spectrogram.
+        
+        Everything that happens after calls to *stx_read_..._fits_file* and before *stix_convert_science_data2ospex* in *stx_convert_...pro*.
+        
+        Args:
+            elut_filename (str, optional): Defaults to None. Name of the ELUT to use.
+            n_energies (int, optional): Defaults to None. Needs to be set to equal the number of energies in the data spectrogram in the case that the current spectrogram is the background to be subtracted from that one."""
             
         # Find corresponding ELUT
         if not elut_filename:
@@ -369,7 +379,7 @@ class Spectrogram:
         self.history += f"+applied_{self.elut_filename}"
         
     def correct_counts(self):
-        """Perform livetime correction of counts"""
+        """Perform livetime correction of counts."""
         if self.alpha:
             self.counts = np.moveaxis(self.counts,0,2)
             self.error = np.moveaxis(self.error,0,2)
@@ -395,11 +405,11 @@ class Spectrogram:
         self.history += "+livetime_correction"
         
     def to_rate(self):
-        """convert counts to count rate"""
+        """Convert counts to count rate"""
         self._counts_to_rate()
     
     def _counts_to_rate(self):
-        '''convert counts to rate for writing to FITS'''
+        """Convert counts to rate for writing to FITS"""
         try:
             ltarr = np.tile(self.eff_livetime_fraction, self.n_energies).reshape((self.n_energies,self.eff_livetime_fraction.size)).T #not sure why this and the next line need to be different for reshape
         except AttributeError:
@@ -422,6 +432,7 @@ class Spectrogram:
         self.history += "+counts_to_rate"
         
     def _get_eff_livetime_fraction(self, expanded = True):
+        """Get the effective livetime fraction, either as a 1-D array or a n_energies by n_times array."""
         if self.data_level == 4:
             eff_livetime_fraction = np.sum(self.counts_before_livetime,axis=1)
         else:
@@ -438,7 +449,10 @@ class Spectrogram:
             return eff_livetime_fraction_expanded
 
     def _energy_dependent_sys_err(self):
-        """Create SYS_ERR array for rate table"""
+        """Create SYS_ERR array for rate table
+        
+        Returns:
+            np.array: Energy-dependent systematic error term."""
         #xspec in gneral works with energy dependent systematic errors
         sys_err  = np.zeros(self.e_axis.energy_mean.size) + 0.03
         sys_err[np.where(self.e_axis.energy_mean < 10.)] = 0.05 #below 10 keV
@@ -471,7 +485,7 @@ class Spectrogram:
             srm_edges = np.array([[mn,mx] for mn,mx in zip(srm[2].data.E_MIN + self.energy_shift, srm[2].data.E_MAX + self.energy_shift)])
             spec_edges = np.float32(self.e_axis.edges_2)
             srm_channels = [np.where(srm_edges == e1)[0][0] for e1 in spec_edges if e1 in srm_edges]
-            respfile = write_cropped_srm(srm,srm_channels, request_id = self.request_id, energy_shift = self.energy_shift)
+            respfile = write_cropped_srm(srm,srm_channels, request_id = self.request_id)
         else:
             respfile = srm_file[srm_file.rfind('/')+1:]
         srm.close()
@@ -479,7 +493,13 @@ class Spectrogram:
         self.respfile = respfile
     
     def spectrum_to_fits(self, fitsfilename, srm_file = "stx_srm_full.fits", write_srm = True):
-        """Write the spectrogram to an OGIP-compatible FITS file. It can either be background-subtracted or not. Currently cannot be used to write background files."""
+        """Write the spectrogram to an OGIP-compatible FITS file. It can either be background-subtracted or not. Currently cannot be used to write background files.
+        
+        Args:
+            fitsfilename (str): Name of the FITS file to be written.
+            srm_file (str, optional): .srm file from which to derive the .srm file corresponding to this observation.
+            write_srm (bool, optional): Defaults to True. Whether or not to write the .srm file as well.
+        """
         
         if write_srm:
             self._write_srm_from_file()
@@ -534,6 +554,7 @@ class Spectrogram:
         print(f"Spectrogram written to {os.getcwd()}/{fitsfilename}")
     
 class stx_time_axis:
+    """Time axis class for spectrogram. Compare to *stx_time_axis.pro*."""
     def __init__(self, time_mean = None, time_start = None, time_end = None, duration = None):
         for k,v in locals().items():
             if k != 'self':
@@ -541,7 +562,7 @@ class stx_time_axis:
         self.type = 'stx_time_axis'
     
     def RHESSI_format_times(self):
-        """for FITS header """
+        """Calculate certain MJD time values for FITS header."""
         tstart = Time(self.time_start[0]).mjd
         tstop = Time(self.time_end[-1]).mjd
         timezeri = int(tstart)
@@ -551,12 +572,8 @@ class stx_time_axis:
         tstopf = tstop - tstopi
         return timezeri, tstartf, tstopi, tstopf
         
-    def _to_IDL_MJD(self):
-        """convert from datetimes to IDL- like MJD structure with tags MJD and TIME, for comparison. Dataframe for ease of use """
-        #int(np.rint((tstart - timezeri)*8.64e7)) #ms since start of day
-        return None
-        
 class stx_energy_axis:
+    """Energy axis class for spectrogram. Compare to *stx_energy_axis.pro*."""
     def __init__(self, num_energy = 32, energy_mean = None, gmean = None, low = None, high = None, low_fsw_idx = None, high_fsw_idx = None, edges_1 = None, edges_2 = None, width = None):
         for k,v in locals().items():
             if k != 'self':

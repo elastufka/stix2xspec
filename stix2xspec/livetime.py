@@ -17,6 +17,15 @@ from importlib import resources
 #    return prob_diff_pix
         
 def livetime_fraction(triggergram, det_used, adg_file = 'adg_table.json'):
+    """Calculate the livetime fraction. Equivalent to _stx_livetime_fraction.pro_. Pileup correction parameter is set to beta = 0.940591 rather than calculating directly via an equivalent to _stx_pileup_corr_parameter.pro_.
+    
+    Args:
+        triggergram (stix2xspec.Triggergram): Triggers associated with input data
+        det_used (np.array): Array of detectors used in observation
+        adg_file (str, optional): Name of the ADG file to use
+        
+    Returns:
+        np.array: livetime fraction"""
     with resources.path('stix2xspec.data', adg_file) as aa:
         adg_sc = pd.read_json(aa) #should probably be in STIX-CONF
     adg_sc.drop(0, inplace= True) # drop first row
@@ -50,8 +59,18 @@ def livetime_fraction(triggergram, det_used, adg_file = 'adg_table.json'):
     return result
     
 def spectrogram_livetime(spectrogram, level = 4):
-    """currently accurate to 1e-3, which does lead to differences with IDL of up to 1 count in the test spectrum"""
-    ntimes = spectrogram.n_times#counts.shape[-1]
+    """Perform livetime correction to spectrogram counts. Equivalent to _stx_spectrogram_livetime.pro_.
+    
+    Args:
+        spectrogram (stix2xspec.Spectrogram): Input spectrogram from FITS file, with ELUT applied
+        level (int, optional): Data level of spectrogram. Defaults to 4.
+        
+    Returns:
+        corrected_counts (np.array): Livetime-corrected counts
+        corrected_error (np.array): Livetime-corrected error
+        livetime_frac (np.array): Livetime fraction
+        """
+    ntimes = spectrogram.n_times
     nenergies = spectrogram.n_energies
     det_used = np.where(spectrogram.detector_mask == 1)[0]
     ndet = det_used.size
@@ -89,9 +108,9 @@ def spectrogram_livetime(spectrogram, level = 4):
     corrected_counts_upper =  spec_counts/livetime_fracs[2]
 
     error_from_livetime = (corrected_counts_upper - corrected_counts_lower)/2.
-    temp_err = spectrogram.error.copy()#np.zeros_like(spectrogram.error.T) #should probably not be zeros at this point... mention to Ewan
-    if temp_err.shape != livetime_fracs[1].shape: #still neccesary?
-        temp_err = spectrogram.error.T #np.zeros_like(spectrogram.error.T) for testing only!
+    temp_err = spectrogram.error.copy()
+    if temp_err.shape != livetime_fracs[1].shape: #still necessary?
+        temp_err = spectrogram.error.T 
     
     corrected_error = np.sqrt((temp_err/livetime_fracs[1])**2. + error_from_livetime**2.)
 

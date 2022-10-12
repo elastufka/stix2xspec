@@ -6,14 +6,28 @@ import warnings
 from datetime import datetime as dt
 from datetime import timedelta as td
 
-#from .read_elut import read_elut
 from .spectrogram import Spectrogram
 from .triggergram import Triggergram
 from .spectrogram_utils import *
 from matplotlib import pyplot as plt
 
-def convert_spectrogram(fits_path_data, fits_path_bk = None, shift_duration = 0, energy_shift = 0, distance = 1.0,  flare_location= [0,0], elut_filename = None, replace_doubles = False, keep_short_bins = True, apply_time_shift = True, to_fits= False, use_discriminators = True, testing = False):
-    """Convert STIX spectrogram for use in XSPEC (translation of stx_convert_spectrogram.pro, which coverts STIX spectrograms for use with OPSEX) """
+def convert_spectrogram(fits_path_data, fits_path_bk = None, shift_duration = 0, energy_shift = 0, distance = 1.0, elut_filename = None, replace_doubles = False, keep_short_bins = True, to_fits= False, use_discriminators = True, testing = False):
+    """Convert STIX spectrogram for use in XSPEC (translation of _stx_convert_spectrogram.pro_, which coverts STIX spectrograms for use with OPSEX, and also of _stx_convert_pixel_data.pro_, which does the same for L1A pixel data).
+    
+    Args:
+        fits_path_data (str): Full path to FITS file to be converted.
+        fits_path_bk (str): Full path to FITS background file to be subtracted.
+        shift_duration (int, optional): Defaults to 0. Shift all time bins by 1 to account for FSW time input discrepancy prior to 09-Dec-2021. N.B. WILL ONLY WORK WITH FULL TIME RESOLUTION DATA WHICH IS OFTEN NOT THE CASE FOR PIXEL DATA.
+        energy_shift (int, optional): Defaults to 0. Shift all energies by this value in keV. Rarely needed only for cases where there is a significant shift in calibration before a new ELUT can be uploaded.
+        distance (float, optional): Defaults to 1.0. Distance in AU between Solar Orbiter and the Earth.
+        elut_filename (str, optional): Defaults to None. Name of the ELUT file to use.
+        replace_doubles (bool, optional): Defaults to False.
+        keep_short_bins (bool, optional): Defaults to True. Otherwise discards time bins shorter than a minimum value.
+        to_fits (bool, optional): Defaults to False. If True, a FITS file will be written.
+        use_discriminators (bool, optional): Defaults to True.
+    
+    Returns:
+        str: Full path to FITS file that has been written with the converted spectrogram."""
     spec = Spectrogram(fits_path_data, shift_duration = shift_duration, replace_doubles = replace_doubles, keep_short_bins = keep_short_bins, background = False, use_discriminators = use_discriminators)
     dist_factor = 1./(spec.distance**2.) #when is this used?
     spec.apply_elut(elut_filename = elut_filename)
@@ -69,8 +83,20 @@ def convert_spectrogram(fits_path_data, fits_path_bk = None, shift_duration = 0,
         spec.spectrum_to_fits(fitsfilename)
         return f"{os.getcwd()}/{fitsfilename}"
 
-def bk_count_manipulations(bk_counts, duration, timedel, energy_bins, eff_ewidth, ntimes, name = 'corrected_counts_bk', error = False):
-    """Adjust input counts for effective energy width and duration"""
+def bk_count_manipulations(bk_counts, duration, timedel, energy_bins, eff_ewidth, ntimes, error = False):
+    """Adjust input counts for effective energy width and duration.
+    
+    Args:
+        bk_counts (np.array): The input array.
+        duration (np.array): Array of time bin durations.
+        timedel (np.array): Array of time deltas.
+        energy_bins (np.array): Energy bins.
+        eff_ewidth (np.array): Effective energy bin width.
+        ntimes (int): Number of times.
+        error (bool): Defaults to False. Set to True if input array is counts error rather than counts.
+        
+    Returns:
+        np.array: array containing the input adjusted for effective energy width and duration."""
     if error:
         #dim1 = bk_counts.shape[-1]
         bk_counts = np.sqrt(np.sum(bk_counts**2,axis = 0))
@@ -89,7 +115,15 @@ def bk_count_manipulations(bk_counts, duration, timedel, energy_bins, eff_ewidth
     return bk_counts
         
 def new_energy_axis(spec, emin = 1, emax = 150):
-    """Correct energy axis if required"""
+    """Correct energy axis if required.
+    
+    Args:
+        spec(stix2xspec.Spectrogram): The input spectrogram
+        emin (int, optional): Defaults to 1. The minimum energy.
+        emax (int, optional): Defaults to 150. The maximum energy.
+        
+    Returns:
+        tuple: stx_energy_axis object containing new energy axis, list of new energies."""
     new_edges = np.where(np.logical_and(spec.e_axis.edges_1 > emin, spec.e_axis.edges_1 <= emax))[0] #makes sense to be <= rather than just <
     new_energy_edges = spec.e_axis.edges_1[new_edges]
 
@@ -102,26 +136,21 @@ def new_energy_axis(spec, emin = 1, emax = 150):
     e_axis_new = stx_energy_axis(num_energy = len(new_energy_edges) - 1, energy_mean = out_mean, gmean = out_gmean, width = width, low = energy_low, high = energy_high, low_fsw_idx = low_fsw_idx, high_fsw_idx = high_fsw_idx, edges_1 = edges_1, edges_2 = edges_2)
 
     new_energies = [i for i,e in enumerate(spec.e_axis.energy_mean) if e in e_axis_new.energy_mean]
-    #print(self.e_axis.__dict__)
-    #print(new_energies, len(new_energies), spec_in_corr.shape)
     #self.e_axis = e_axis_new
     #self.counts =  spec_in_corr[new_energies,:]
     #self.error = total_error[new_energies,:]
     return e_axis_new, new_energies
 
 def background_subtract(spectrogram, spectrogram_bk, counts_spec, testing = False):
-    """Perform background subtraction of spectrogram counts
+    """Perform background subtraction of spectrogram counts.
     
-    Inputs:
-    
-    spectrogram: Spectrogram
-       The spectrogram of the signal that will be background subtracted
-       
-    spectrogram_bk: Spectrogram
-       The spectrogram of the background that will be subtracted from the signal
-       
-    counts_spec: numpy array
-        Original, uncorrected counts of input spectrogram"""
+    Args:
+        spectrogram (stix2xspec.Spectrogram): The spectrogram of the signal that will be background subtracted
+        spectrogram_bk (stix2xspec.Spectrogram): The spectrogram of the background that will be subtracted from the signal
+        counts_spec (np.array): Original, uncorrected counts of input spectrogram.
+        
+    Returns:
+        tuple: Arrays containing background-subtracted counts and total error."""
     corrected_counts = spectrogram.counts
     corrected_error = spectrogram.error
     corrected_error_bk = spectrogram_bk.error[...,0].T

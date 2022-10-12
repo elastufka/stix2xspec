@@ -6,10 +6,23 @@
 Welcome to stix2xspec's documentation!
 ======================================
 
+Convert STIX science data (L1A, L1, or L4 spectrograms or pixel data) to a format compatible with XSPEC
+
+.. note::
+
+This project is under active development.
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
+   
+Contents
+--------
 
+.. toctree::
+
+   usage
+   source/stix2xspec
 
 
 Indices and tables
