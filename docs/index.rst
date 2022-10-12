@@ -22,7 +22,7 @@ Contents
 .. toctree::
 
    usage
-   source/modules
+   api/modules
 
 
 Indices and tables
