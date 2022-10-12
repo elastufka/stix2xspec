@@ -7,4 +7,4 @@ rich==10.16.2 ; python_version >= "3.7" and python_version < "4.0"
 shellingham==1.5.0 ; python_version >= "3.7" and python_version < "4.0"
 typer[all]==0.4.2 ; python_version >= "3.7" and python_version < "4.0"
 typing-extensions==4.3.0 ; python_version >= "3.7" and python_version < "3.8"
-zipp==3.8.1 ; python_version >= "3.7" and python_version < "3.8"
+zipp==3.8.1 ; python_version >= "3.7" and python_version < "3.8" ; myst_parser==0.18.1
