@@ -28,10 +28,10 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 master_doc = 'index'
 
 apidoc_excluded_paths = ['../stix2xspec/data','../stix2xspec/__init__.py']
-apidoc_extra_args = [
-    '--implicit-namespaces',
-    '--private',  # include “_private” modules
-]
+#apidoc_extra_args = [
+#    '--implicit-namespaces',
+#    '--private',  # include “_private” modules
+#]
 apidoc_module_dir = '../stix2xspec'
 apidoc_module_first = False
 #apidoc_output_dir = 'pkg'

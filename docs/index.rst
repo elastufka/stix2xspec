@@ -13,7 +13,7 @@ Convert STIX science data (L1A, L1, or L4 spectrograms or pixel data) to a forma
 This project is under active development.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
    
 Contents
@@ -29,5 +29,4 @@ Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
