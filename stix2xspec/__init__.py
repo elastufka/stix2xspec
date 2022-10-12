@@ -1,5 +1,5 @@
 # type: ignore[attr-defined]
-"""Convert STIX science data (L1A, L1, or L4 spectrograms or pixel data) to a format compatible with XSPEC"""
+#"""Convert STIX science data (L1A, L1, or L4 spectrograms or pixel data) to a format compatible with XSPEC"""
 
 import sys
 

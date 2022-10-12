@@ -22,7 +22,7 @@ Contents
 .. toctree::
 
    usage
-   source/stix2xspec
+   source/modules
 
 
 Indices and tables
